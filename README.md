@@ -14,20 +14,20 @@
 ## Getting Started
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 テスト:
 
 ```bash
-npm test
+pnpm test
 ```
 
 ビルド:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## DSL Example
