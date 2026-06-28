@@ -189,21 +189,21 @@ export function renderWorkflowSvg(workflow, options = {}) {
   <title id="workflow-title">${escapeXml(workflow.title)}</title>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M 0 0 L 8 3 L 0 6 z" fill="#315f72" />
+      <path d="M 0 0 L 8 3 L 0 6 z" fill="#d24726" />
     </marker>
     <style>
-      svg { background: #fbfaf6; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      .lane-line { stroke: #d9d2c1; stroke-width: 1; }
-      .lane-label { fill: #5b5f63; font-size: 14px; font-weight: 700; }
-      .time-line { stroke: #d7e2dc; stroke-width: 1; stroke-dasharray: 4 8; }
-      .time-label { fill: #6a7d74; font-size: 12px; font-weight: 700; text-anchor: middle; }
-      .edge { fill: none; stroke: #315f72; stroke-width: 2.4; }
+      svg { background: #fffdfb; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .lane-line { stroke: #ded9d2; stroke-width: 1; }
+      .lane-label { fill: #66615c; font-size: 14px; font-weight: 700; }
+      .time-line { stroke: #e5dfd8; stroke-width: 1; stroke-dasharray: 4 8; }
+      .time-label { fill: #8b8580; font-size: 12px; font-weight: 700; text-anchor: middle; }
+      .edge { fill: none; stroke: #d24726; stroke-width: 2.4; }
       .edge-dotted { stroke-dasharray: 7 7; }
-      .node rect { fill: #ffffff; stroke: #315f72; stroke-width: 2; }
-      .node text { fill: #1f2a2e; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+      .node rect { fill: #ffffff; stroke: #d24726; stroke-width: 2; }
+      .node text { fill: #242424; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
     </style>
   </defs>
-  <text x="24" y="38" fill="#1f2a2e" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
+  <text x="24" y="38" fill="#242424" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
   ${gridLines.join("")}
   ${laneRows.join("")}
   ${edges.join("")}
