@@ -138,6 +138,16 @@ export function renderWorkflowSvg(workflow, options = {}) {
   const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
   const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
   const height = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
+  const lastLaneBottom = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight;
+  const lastRenderedBottom = Math.max(
+    config.paddingTop + config.nodeHeight,
+    lastLaneBottom,
+    ...workflow.nodes.map((node) => config.paddingTop + node.gridY * config.gridYSize + config.nodeHeight),
+  );
+  const timeLineEndY = Math.min(
+    height - config.paddingBottom / 2,
+    lastRenderedBottom + Math.max(16, config.paddingBottom / 4),
+  );
   const nodePosition = (node) => ({
     x: config.paddingLeft + node.gridX * config.gridXSize,
     y: config.paddingTop + node.gridY * config.gridYSize,
@@ -153,10 +163,11 @@ export function renderWorkflowSvg(workflow, options = {}) {
   const gridLines = Array.from({ length: maxGridX + 1 }, (_, gridX) => {
     const x = config.paddingLeft + gridX * config.gridXSize + config.nodeWidth / 2;
     return `
-      <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${height - config.paddingBottom / 2}" />
+      <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${timeLineEndY}" />
       <text class="time-label" x="${x}" y="${config.paddingTop - 48}">T${gridX}</text>`;
   });
 
+  const edgeLaneGroupCounts = new Map();
   const edges = workflow.edges.map((edge, index) => {
     const from = nodeById.get(edge.from);
     const to = nodeById.get(edge.to);
@@ -168,9 +179,12 @@ export function renderWorkflowSvg(workflow, options = {}) {
     const y2 = toPos.y + config.nodeHeight / 2;
     const sameLane = from.lane === to.lane;
     const forward = to.gridX > from.gridX;
+    const laneGroupKey = `${from.gridY}:${to.gridY}`;
+    const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
+    edgeLaneGroupCounts.set(laneGroupKey, laneGroupIndex + 1);
     const path = sameLane && forward
       ? `M ${x1} ${y1} L ${x2} ${y2}`
-      : connectorPath(x1, y1, x2, y2, index);
+      : connectorPath(x1, y1, x2, y2, laneGroupIndex, index);
 
     return `<path class="edge ${edge.type === "dotted" ? "edge-dotted" : ""}" d="${path}" marker-end="url(#arrow)" />`;
   });
@@ -212,7 +226,8 @@ export function renderWorkflowSvg(workflow, options = {}) {
 }
 
 export function generateWorkflowSvg(input, options) {
-  return renderWorkflowSvg(layoutWorkflow(parseWorkflow(input)), options);
+  const workflow = layoutWorkflow(parseWorkflow(input));
+  return renderWorkflowSvg(workflow, options);
 }
 
 function parseEdgeChain(line, lineNo) {
@@ -250,9 +265,9 @@ function validateWorkflow({ lanes, nodes, edges }) {
   }
 }
 
-function connectorPath(x1, y1, x2, y2, index) {
+function connectorPath(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
   const direction = x2 >= x1 ? 1 : -1;
-  const spread = 44 + (index % 4) * 12;
+  const spread = 44 + (laneGroupIndex % 6) * 14 + Math.floor(laneGroupIndex / 6) * 8 + (edgeIndex % 2) * 4;
   const c1x = x1 + direction * spread;
   const c2x = x2 - direction * spread;
   return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
