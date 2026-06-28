@@ -7,12 +7,14 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "capture:engine": "node scripts/capture-engine.js",
     "guard:change": "node scripts/guard-change.js",
     "install:hooks": "git config core.hooksPath .githooks",
     "test": "node --test"
   },
   "packageManager": "pnpm@11.7.0",
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "vite": "^7.0.0"
   }
 }

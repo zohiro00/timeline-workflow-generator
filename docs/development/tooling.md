@@ -5,10 +5,18 @@
 - 依存関係の管理は `pnpm` を使います。`packageManager` は `pnpm@11.7.0` で、ロックファイルは [../../pnpm-lock.yaml](../../pnpm-lock.yaml) です。
 - `pnpm` が使えない環境では、作業前に `corepack enable pnpm` と `corepack prepare pnpm@11.7.0 --activate` で使える状態にしてください。
 - 開発サーバー: `pnpm run dev`
+- UI画像キャプチャ: `pnpm run capture:engine`
 - テスト: `pnpm test`
 - ビルド: `pnpm run build`
 - 変更ゲート: `pnpm run guard:change`
 - Git hook 有効化: `pnpm run install:hooks`
+
+## UI画像キャプチャ
+
+- `pnpm run capture:engine` は、スマホなど開発サーバーを直接確認しにくい環境向けの補助コマンドです。
+- 初回または Playwright 更新後に Chromium がない場合は、`pnpm exec playwright install chromium` を実行してください。
+- 現時点では `/engine` の desktop 正常表示だけを `artifacts/ui-captures/engine-desktop.png` に保存します。
+- 通常の品質ゲートではありません。UI変更の確認が必要なときだけ実行してください。
 
 ## 依存管理
 
