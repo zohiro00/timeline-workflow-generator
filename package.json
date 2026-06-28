@@ -7,6 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "guard:change": "node scripts/guard-change.js",
+    "install:hooks": "git config core.hooksPath .githooks",
     "test": "node --test"
   },
   "packageManager": "pnpm@11.7.0",
