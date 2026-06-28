@@ -9,6 +9,7 @@
 - テスト: `pnpm test`
 - ビルド: `pnpm run build`
 - 変更ゲート: `pnpm run guard:change`
+- Draft PR 作成: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
 - Git hook 有効化: `pnpm run install:hooks`
 
 ## UI画像キャプチャ
