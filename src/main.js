@@ -186,7 +186,7 @@ function renderEnginePage() {
 
       <div class="engine-body">
         <nav class="activity" aria-label="Activity Bar">
-          <button class="activity-btn active" type="button" data-tooltip="Settings" aria-label="Settings">
+          <button id="settings-toggle" class="activity-btn active" type="button" data-tooltip="Settings" aria-label="Settings" aria-controls="settings-sidebar" aria-expanded="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.08A1.7 1.7 0 0 0 8.6 19a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.08A1.7 1.7 0 0 0 5 8.6a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.08A1.7 1.7 0 0 0 15.4 5a1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.2.38.58.6 1 .6h.1a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.02 1.4Z" /></svg>
           </button>
           <button class="activity-btn" type="button" data-tooltip="Workflow" aria-label="Workflow">
@@ -198,7 +198,7 @@ function renderEnginePage() {
           </button>
         </nav>
 
-        <aside class="settings-sidebar" aria-label="Settings">
+        <aside id="settings-sidebar" class="settings-sidebar" aria-label="Settings">
           <div class="sidebar-header">
             <span>Settings</span>
             <span class="sidebar-more">...</span>
@@ -226,6 +226,8 @@ function renderEnginePage() {
               <textarea id="source" class="code-input" spellcheck="false" aria-label="workflow DSL"></textarea>
             </div>
           </section>
+
+          <div class="pane-resizer" role="separator" tabindex="0" aria-label="エディターとプレビューのサイズ変更" aria-orientation="vertical"></div>
 
           <section class="pane preview-pane" aria-label="SVG preview">
             <div class="tabs">
@@ -309,6 +311,11 @@ function mountEngine() {
   const preview = document.querySelector("#preview");
   const download = document.querySelector("#download-svg");
   const restoreSample = document.querySelector("#format-sample");
+  const engineBody = document.querySelector(".engine-body");
+  const settingsToggle = document.querySelector("#settings-toggle");
+  const workspace = document.querySelector(".workspace");
+  const sourcePane = document.querySelector(".source-pane");
+  const paneResizer = document.querySelector(".pane-resizer");
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
@@ -323,6 +330,11 @@ function mountEngine() {
     render();
   });
   download.addEventListener("click", downloadSvg);
+  settingsToggle.addEventListener("click", toggleSettingsSidebar);
+  paneResizer.addEventListener("pointerdown", startPaneResize);
+  paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
+  updatePaneResizerOrientation();
+  window.addEventListener("resize", updatePaneResizerOrientation);
 
   document.querySelectorAll("[data-setting]").forEach((control) => {
     control.addEventListener("input", () => {
@@ -349,6 +361,78 @@ function mountEngine() {
 
   updateGutter();
   render();
+
+  function toggleSettingsSidebar() {
+    const collapsed = engineBody.classList.toggle("sidebar-collapsed");
+    settingsToggle.classList.toggle("active", !collapsed);
+    settingsToggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  function updatePaneResizerOrientation() {
+    const isStacked = window.matchMedia("(max-width: 980px)").matches;
+    paneResizer.setAttribute("aria-orientation", isStacked ? "horizontal" : "vertical");
+  }
+
+  function startPaneResize(event) {
+    event.preventDefault();
+    const metrics = getPaneResizeMetrics();
+
+    paneResizer.setPointerCapture(event.pointerId);
+    document.body.classList.add("is-resizing-pane");
+
+    const resize = (moveEvent) => {
+      const rawSize = metrics.isStacked
+        ? moveEvent.clientY - metrics.bounds.top
+        : moveEvent.clientX - metrics.bounds.left;
+      setSourcePaneSize(rawSize, metrics);
+    };
+
+    const stop = (upEvent) => {
+      paneResizer.releasePointerCapture(upEvent.pointerId);
+      paneResizer.removeEventListener("pointermove", resize);
+      paneResizer.removeEventListener("pointerup", stop);
+      paneResizer.removeEventListener("pointercancel", stop);
+      document.body.classList.remove("is-resizing-pane");
+    };
+
+    paneResizer.addEventListener("pointermove", resize);
+    paneResizer.addEventListener("pointerup", stop);
+    paneResizer.addEventListener("pointercancel", stop);
+  }
+
+  function resizePaneWithKeyboard(event) {
+    const metrics = getPaneResizeMetrics();
+    const currentSize = metrics.isStacked
+      ? sourcePane.getBoundingClientRect().height
+      : sourcePane.getBoundingClientRect().width;
+    const keyToDelta = metrics.isStacked
+      ? { ArrowUp: -24, ArrowDown: 24 }
+      : { ArrowLeft: -24, ArrowRight: 24 };
+    const delta = keyToDelta[event.key];
+    if (!delta) return;
+
+    event.preventDefault();
+    setSourcePaneSize(currentSize + delta, metrics);
+  }
+
+  function getPaneResizeMetrics() {
+    const isStacked = window.matchMedia("(max-width: 980px)").matches;
+    const bounds = workspace.getBoundingClientRect();
+    return {
+      isStacked,
+      bounds,
+      minSourceSize: isStacked ? 220 : 280,
+      minPreviewSize: isStacked ? 220 : 360,
+      resizerSize: isStacked ? paneResizer.offsetHeight : paneResizer.offsetWidth,
+    };
+  }
+
+  function setSourcePaneSize(rawSize, metrics) {
+    const totalSize = metrics.isStacked ? metrics.bounds.height : metrics.bounds.width;
+    const maxSourceSize = Math.max(metrics.minSourceSize, totalSize - metrics.minPreviewSize - metrics.resizerSize);
+    const nextSize = Math.min(Math.max(rawSize, metrics.minSourceSize), maxSourceSize);
+    workspace.style.setProperty("--source-pane-size", `${Math.round(nextSize)}px`);
+  }
 
   function render() {
     try {
