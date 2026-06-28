@@ -30,6 +30,7 @@
 ## 今後の方針
 
 - PR 作成は `gh` を標準にする。
+- PR 作成の入口は `pnpm run pr:create` に固定する。
 - Codex では、keyring や GitHub remote 認証に触れる `gh` 操作を権限付きで実行する。
 - `gh auth status` が sandbox で失敗した場合は、権限付きで再確認する。
 - GitHub コネクタは PR 作成に使わない。
@@ -38,5 +39,6 @@
 ## 再発防止チェック
 
 - PR 作成前に [GitHub 操作方針](../github-workflow.md) を確認する。
+- PR 作成は `pnpm run pr:create` で実行し、GitHub コネクタや直接の `gh pr create` を使わない。
 - `gh auth status` の結果を、sandbox 実行と権限付き実行で混同しない。
 - PR 作成で 403 が出た場合は、コネクタではなく `gh pr create --draft` に寄せる。

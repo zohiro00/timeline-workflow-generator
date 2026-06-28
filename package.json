@@ -10,6 +10,7 @@
     "capture:engine": "node scripts/capture-engine.js",
     "guard:change": "node scripts/guard-change.js",
     "install:hooks": "git config core.hooksPath .githooks",
+    "pr:create": "node scripts/create-pr.js",
     "test": "node --test"
   },
   "packageManager": "pnpm@11.7.0",
