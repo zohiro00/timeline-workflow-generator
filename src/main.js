@@ -332,11 +332,12 @@ function mountEngine() {
   const download = document.querySelector("#download-svg");
   const restoreSample = document.querySelector("#format-sample");
   let currentSvg = "";
+  const scheduleRender = debounce(render, 240);
 
   source.value = sample;
   source.addEventListener("input", () => {
     updateGutter();
-    if (settings.autoRender) render();
+    if (settings.autoRender) scheduleRender();
   });
   restoreSample.addEventListener("click", () => {
     source.value = sample;
@@ -414,4 +415,12 @@ function mountEngine() {
     anchor.click();
     URL.revokeObjectURL(url);
   }
+}
+
+function debounce(callback, delay) {
+  let timerId;
+  return (...args) => {
+    clearTimeout(timerId);
+    timerId = setTimeout(() => callback(...args), delay);
+  };
 }

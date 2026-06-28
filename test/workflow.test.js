@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
+import { generateWorkflowSvg, layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
 
 const sample = `
 \`\`\`workflow
@@ -61,4 +61,48 @@ test("renders svg with labels and connectors", () => {
   assert.match(svg, /申請ワークフロー/);
   assert.match(svg, /marker-end/);
   assert.match(svg, /edge-dotted/);
+});
+
+test("passes render options through generateWorkflowSvg", () => {
+  const defaultSvg = generateWorkflowSvg(sample);
+  const widerSvg = generateWorkflowSvg(sample, { gridXSize: 250 });
+
+  assert.match(defaultSvg, /viewBox="0 0 912 454"/);
+  assert.match(widerSvg, /viewBox="0 0 1098 454"/);
+});
+
+test("clips time lines near the last rendered lane", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
+
+  assert.match(svg, /class="time-line"[^>]+y2="388"/);
+});
+
+test("separates multi-lane connector curves by lane pair", () => {
+  const crossingSample = `
+lane: top
+lane: bottom
+node a1: A1 (lane: top)
+node a2: A2 (lane: top)
+node b1: B1 (lane: bottom)
+node b2: B2 (lane: bottom)
+a1 -> b1
+a2 -> b2
+`;
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(crossingSample)));
+
+  assert.match(svg, /C 296 113, 284 229, 328 229/);
+  assert.match(svg, /C 314 113, 266 229, 328 229/);
+});
+
+test("escapes svg text content", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`
+title: <script>alert(1)</script>
+lane: <Lane & One>
+node a: <Node & One> (lane: <Lane & One>)
+`)));
+
+  assert.doesNotMatch(svg, /<script>/);
+  assert.match(svg, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(svg, /&lt;Lane &amp; One&gt;/);
+  assert.match(svg, /&lt;Node &amp; One&gt;/);
 });
