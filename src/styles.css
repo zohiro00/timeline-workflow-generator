@@ -516,9 +516,53 @@ svg {
   text-transform: uppercase;
 }
 
-.sidebar-more {
+.sidebar-icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
   color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sidebar-icon-btn:hover {
+  color: var(--text);
+  background: #ece8e2;
+}
+
+.sidebar-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar-icon-btn[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  z-index: 100;
+  transform: translateY(-50%);
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text);
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(60, 52, 45, 0.12);
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .settings-group {

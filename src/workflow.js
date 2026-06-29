@@ -125,7 +125,7 @@ export function layoutWorkflow(workflow) {
 export function renderWorkflowSvg(workflow, options = {}) {
   const config = {
     paddingLeft: 140,
-    paddingTop: 92,
+    paddingTop: 116,
     paddingRight: 96,
     paddingBottom: 88,
     gridXSize: 188,

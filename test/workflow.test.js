@@ -50,14 +50,21 @@ test("passes render options through generateWorkflowSvg", () => {
   const defaultSvg = generateWorkflowSvg(sample);
   const widerSvg = generateWorkflowSvg(sample, { gridXSize: 250 });
 
-  assert.match(defaultSvg, /viewBox="0 0 912 454"/);
-  assert.match(widerSvg, /viewBox="0 0 1098 454"/);
+  assert.match(defaultSvg, /viewBox="0 0 912 478"/);
+  assert.match(widerSvg, /viewBox="0 0 1098 478"/);
 });
 
 test("clips time lines near the last rendered lane", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
 
-  assert.match(svg, /class="time-line"[^>]+y2="388"/);
+  assert.match(svg, /class="time-line"[^>]+y2="412"/);
+});
+
+test("keeps title and time labels vertically separated", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
+
+  assert.match(svg, /<text x="24" y="38"[^>]*>申請ワークフローの時系列図<\/text>/);
+  assert.match(svg, /class="time-label" x="196" y="68">T0<\/text>/);
 });
 
 test("separates multi-lane connector curves by lane pair", () => {
@@ -73,8 +80,8 @@ a2 -> b2
 `;
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(crossingSample)));
 
-  assert.match(svg, /C 296 113, 284 229, 328 229/);
-  assert.match(svg, /C 314 113, 266 229, 328 229/);
+  assert.match(svg, /C 296 137, 284 253, 328 253/);
+  assert.match(svg, /C 314 137, 266 253, 328 253/);
 });
 
 test("escapes svg text content", () => {

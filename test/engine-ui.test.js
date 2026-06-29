@@ -38,6 +38,38 @@ test("engine settings sidebar can be collapsed and reopened", async () => {
   await page.close();
 });
 
+test("engine editor starts with workflow DSL only", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const sourceValue = await page.locator("#source").inputValue();
+
+  assert.ok(sourceValue.startsWith("title: 申請ワークフローの時系列図"));
+  assert.doesNotMatch(sourceValue, /```workflow/);
+  assert.doesNotMatch(sourceValue, /Markdownの中に workflow ブロック/);
+
+  await page.close();
+});
+
+test("engine settings can be restored to defaults", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const gridControl = page.locator('[data-setting="gridXSize"]');
+  const nodeControl = page.locator('[data-setting="nodeWidth"]');
+  const reset = page.locator("#reset-settings");
+
+  await gridControl.fill("224");
+  await nodeControl.fill("156");
+  assert.equal(await page.locator("#gridXSize-value").textContent(), "224px");
+  assert.equal(await page.locator("#nodeWidth-value").textContent(), "156px");
+
+  await reset.click();
+  assert.equal(await gridControl.inputValue(), "188");
+  assert.equal(await nodeControl.inputValue(), "112");
+  assert.equal(await page.locator("#gridXSize-value").textContent(), "188px");
+  assert.equal(await page.locator("#nodeWidth-value").textContent(), "112px");
+  await page.locator("#status.status.ok").waitFor({ state: "visible" });
+
+  await page.close();
+});
+
 test("engine panes can be resized horizontally on desktop", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const sourcePane = page.locator(".source-pane");
