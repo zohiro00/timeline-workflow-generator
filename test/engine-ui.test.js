@@ -53,19 +53,43 @@ test("engine settings can be restored to defaults", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const gridControl = page.locator('[data-setting="gridXSize"]');
   const nodeControl = page.locator('[data-setting="nodeWidth"]');
+  const themeControl = page.locator('[data-setting="themeHint"]');
   const reset = page.locator("#reset-settings");
 
   await gridControl.fill("224");
   await nodeControl.fill("156");
+  await themeControl.selectOption("consulting-gray-outline");
   assert.equal(await page.locator("#gridXSize-value").textContent(), "224px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "156px");
 
   await reset.click();
   assert.equal(await gridControl.inputValue(), "188");
   assert.equal(await nodeControl.inputValue(), "112");
+  assert.equal(await themeControl.inputValue(), "consulting-blue-outline");
   assert.equal(await page.locator("#gridXSize-value").textContent(), "188px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "112px");
+  assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 枠線");
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
+
+  await page.close();
+});
+
+test("engine theme preset updates the rendered svg", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const themeControl = page.locator('[data-setting="themeHint"]');
+
+  assert.equal(await themeControl.inputValue(), "consulting-blue-outline");
+  assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 枠線");
+  assert.match(await page.locator("#preview svg style").textContent(), /stroke: #1f4e79/);
+
+  await themeControl.selectOption("consulting-blue-fill");
+  assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 塗り");
+  assert.match(await page.locator("#preview svg style").textContent(), /\.node rect \{ fill: #1f4e79; stroke: #1f4e79;/);
+  assert.match(await page.locator("#preview svg style").textContent(), /\.node text \{ fill: #ffffff;/);
+
+  await themeControl.selectOption("consulting-gray-outline");
+  assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 枠線");
+  assert.match(await page.locator("#preview svg style").textContent(), /stroke: #595959/);
 
   await page.close();
 });
