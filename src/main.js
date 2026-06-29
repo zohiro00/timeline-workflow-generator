@@ -71,8 +71,9 @@ const settingsSchema = [
         value: "consulting-blue-outline",
         options: [
           { value: "consulting-blue-outline", label: "濃い青 / 枠線" },
-          { value: "consulting-blue-fill", label: "濃い青 / 塗り" },
+          { value: "consulting-blue-fill", label: "濃い青 / 塗りつぶし" },
           { value: "consulting-gray-outline", label: "灰色 / 枠線" },
+          { value: "consulting-gray-fill", label: "灰色 / 塗りつぶし" },
         ],
       },
       {

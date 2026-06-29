@@ -43,6 +43,18 @@ const workflowThemes = {
     nodeText: themeColor.grayText,
     title: themeColor.grayText,
   },
+  "consulting-gray-fill": {
+    background: "#ffffff",
+    laneLine: "#d7d7d7",
+    laneLabel: themeColor.gray,
+    timeLine: "#e5e5e5",
+    timeLabel: "#7f7f7f",
+    edge: themeColor.gray,
+    nodeFill: themeColor.gray,
+    nodeStroke: themeColor.gray,
+    nodeText: "#ffffff",
+    title: themeColor.grayText,
+  },
 };
 
 export class WorkflowError extends Error {

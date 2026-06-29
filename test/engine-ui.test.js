@@ -83,13 +83,18 @@ test("engine theme preset updates the rendered svg", async () => {
   assert.match(await page.locator("#preview svg style").textContent(), /stroke: #1f4e79/);
 
   await themeControl.selectOption("consulting-blue-fill");
-  assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 塗り");
+  assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 塗りつぶし");
   assert.match(await page.locator("#preview svg style").textContent(), /\.node rect \{ fill: #1f4e79; stroke: #1f4e79;/);
   assert.match(await page.locator("#preview svg style").textContent(), /\.node text \{ fill: #ffffff;/);
 
   await themeControl.selectOption("consulting-gray-outline");
   assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 枠線");
   assert.match(await page.locator("#preview svg style").textContent(), /stroke: #595959/);
+
+  await themeControl.selectOption("consulting-gray-fill");
+  assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 塗りつぶし");
+  assert.match(await page.locator("#preview svg style").textContent(), /\.node rect \{ fill: #595959; stroke: #595959;/);
+  assert.match(await page.locator("#preview svg style").textContent(), /\.node text \{ fill: #ffffff;/);
 
   await page.close();
 });
