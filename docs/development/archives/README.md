@@ -6,6 +6,7 @@
 
 - [0001: GitHub PR 作成時の認証・コネクタ混乱](0001-github-pr-auth-and-connector.md)
 - [0002: テスト fixture を runtime サンプルへ残す](0002-fixture-leakage-into-runtime-samples.md)
+- [0003: 変更されうる値のハードコード](0003-hardcoded-changeable-values.md)
 
 ## 書き方
 
