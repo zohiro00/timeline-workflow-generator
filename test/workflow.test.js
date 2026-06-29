@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sampleWorkflowMarkdown } from "../src/sample-workflow.js";
+import { sampleWorkflowSource } from "../src/sample-workflow.js";
 import { generateWorkflowSvg, layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
 
-const sample = sampleWorkflowMarkdown;
+const sample = sampleWorkflowSource;
+const markdownSample = `# Markdownの中に workflow ブロックを書けます
+
+\`\`\`workflow
+${sample}
+\`\`\``;
 
 test("parses workflow blocks from markdown", () => {
-  const workflow = parseWorkflow(sample);
+  const workflow = parseWorkflow(markdownSample);
   assert.equal(workflow.title, "申請ワークフローの時系列図");
   assert.deepEqual(workflow.lanes, ["a申請", "b申請", "c申請"]);
   assert.equal(workflow.nodes.length, 6);
@@ -50,14 +55,21 @@ test("passes render options through generateWorkflowSvg", () => {
   const defaultSvg = generateWorkflowSvg(sample);
   const widerSvg = generateWorkflowSvg(sample, { gridXSize: 250 });
 
-  assert.match(defaultSvg, /viewBox="0 0 912 454"/);
-  assert.match(widerSvg, /viewBox="0 0 1098 454"/);
+  assert.match(defaultSvg, /viewBox="0 0 912 478"/);
+  assert.match(widerSvg, /viewBox="0 0 1098 478"/);
 });
 
 test("clips time lines near the last rendered lane", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
 
-  assert.match(svg, /class="time-line"[^>]+y2="388"/);
+  assert.match(svg, /class="time-line"[^>]+y2="412"/);
+});
+
+test("keeps title and time labels vertically separated", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
+
+  assert.match(svg, /<text x="24" y="38"[^>]*>申請ワークフローの時系列図<\/text>/);
+  assert.match(svg, /class="time-label" x="196" y="68">T0<\/text>/);
 });
 
 test("separates multi-lane connector curves by lane pair", () => {
@@ -73,8 +85,8 @@ a2 -> b2
 `;
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(crossingSample)));
 
-  assert.match(svg, /C 296 113, 284 229, 328 229/);
-  assert.match(svg, /C 314 113, 266 229, 328 229/);
+  assert.match(svg, /C 296 137, 284 253, 328 253/);
+  assert.match(svg, /C 314 137, 266 253, 328 253/);
 });
 
 test("escapes svg text content", () => {

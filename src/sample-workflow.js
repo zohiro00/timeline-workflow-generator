@@ -1,7 +1,4 @@
-export const sampleWorkflowMarkdown = `# Markdownの中に workflow ブロックを書けます
-
-\`\`\`workflow
-title: 申請ワークフローの時系列図
+export const sampleWorkflowSource = `title: 申請ワークフローの時系列図
 
 lane: a申請
 lane: b申請
@@ -18,5 +15,4 @@ a1 -> a2
 a2 -> b1
 b1 -> b2
 b1 -.-> a4
-a2 -> a3 -> a4
-\`\`\``;
+a2 -> a3 -> a4`;

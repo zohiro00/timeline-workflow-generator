@@ -1,5 +1,5 @@
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "./workflow.js";
-import { sampleWorkflowMarkdown } from "./sample-workflow.js";
+import { sampleWorkflowSource } from "./sample-workflow.js";
 import "./styles.css";
 
 const settingsSchema = [
@@ -82,7 +82,8 @@ const settingsSchema = [
   },
 ];
 
-const settings = Object.fromEntries(settingsSchema.flatMap((group) => group.items.map((item) => [item.id, item.value])));
+const defaultSettings = Object.fromEntries(settingsSchema.flatMap((group) => group.items.map((item) => [item.id, item.value])));
+const settings = { ...defaultSettings };
 
 document.querySelector("#app").innerHTML = location.pathname.startsWith("/engine")
   ? renderEnginePage()
@@ -201,7 +202,9 @@ function renderEnginePage() {
         <aside id="settings-sidebar" class="settings-sidebar" aria-label="Settings">
           <div class="sidebar-header">
             <span>Settings</span>
-            <span class="sidebar-more">...</span>
+            <button id="reset-settings" class="sidebar-icon-btn" type="button" aria-label="設定を既定値に戻す" data-tooltip="Reset settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
+            </button>
           </div>
           ${settingsSchema.map(renderSettingsGroup).join("")}
         </aside>
@@ -311,6 +314,7 @@ function mountEngine() {
   const preview = document.querySelector("#preview");
   const download = document.querySelector("#download-svg");
   const restoreSample = document.querySelector("#format-sample");
+  const resetSettings = document.querySelector("#reset-settings");
   const engineBody = document.querySelector(".engine-body");
   const settingsToggle = document.querySelector("#settings-toggle");
   const workspace = document.querySelector(".workspace");
@@ -319,16 +323,17 @@ function mountEngine() {
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
-  source.value = sampleWorkflowMarkdown;
+  source.value = sampleWorkflowSource;
   source.addEventListener("input", () => {
     updateGutter();
     if (settings.autoRender) scheduleRender();
   });
   restoreSample.addEventListener("click", () => {
-    source.value = sampleWorkflowMarkdown;
+    source.value = sampleWorkflowSource;
     updateGutter();
     render();
   });
+  resetSettings.addEventListener("click", restoreDefaultSettings);
   download.addEventListener("click", downloadSvg);
   settingsToggle.addEventListener("click", toggleSettingsSidebar);
   paneResizer.addEventListener("pointerdown", startPaneResize);
@@ -460,6 +465,21 @@ function mountEngine() {
       nodeWidth: settings.nodeWidth,
       nodeHeight: settings.nodeHeight,
     };
+  }
+
+  function restoreDefaultSettings() {
+    Object.assign(settings, defaultSettings);
+    document.querySelectorAll("[data-setting]").forEach((control) => {
+      const key = control.dataset.setting;
+      if (control.type === "checkbox") {
+        control.checked = Boolean(defaultSettings[key]);
+      } else {
+        control.value = defaultSettings[key];
+      }
+      const output = document.querySelector(`#${key}-value`);
+      if (output) output.textContent = `${defaultSettings[key]}px`;
+    });
+    render();
   }
 
   function updateGutter() {
