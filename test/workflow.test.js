@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sampleWorkflowMarkdown } from "../src/sample-workflow.js";
+import { sampleWorkflowSource } from "../src/sample-workflow.js";
 import { generateWorkflowSvg, layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
 
-const sample = sampleWorkflowMarkdown;
+const sample = sampleWorkflowSource;
+const markdownSample = `# Markdownの中に workflow ブロックを書けます
+
+\`\`\`workflow
+${sample}
+\`\`\``;
 
 test("parses workflow blocks from markdown", () => {
-  const workflow = parseWorkflow(sample);
+  const workflow = parseWorkflow(markdownSample);
   assert.equal(workflow.title, "申請ワークフローの時系列図");
   assert.deepEqual(workflow.lanes, ["a申請", "b申請", "c申請"]);
   assert.equal(workflow.nodes.length, 6);

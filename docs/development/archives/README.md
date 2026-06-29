@@ -5,6 +5,7 @@
 ## 一覧
 
 - [0001: GitHub PR 作成時の認証・コネクタ混乱](0001-github-pr-auth-and-connector.md)
+- [0002: テスト fixture を runtime サンプルへ残す](0002-fixture-leakage-into-runtime-samples.md)
 
 ## 書き方
 
