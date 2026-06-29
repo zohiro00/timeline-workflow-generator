@@ -1,4 +1,61 @@
 const EDGE_TOKEN_PATTERN = /(-\.->|->)/g;
+const defaultThemeId = "consulting-blue-outline";
+const themeColor = {
+  consultingBlue: "#1f4e79",
+  consultingText: "#1f2937",
+  gray: "#595959",
+  grayText: "#262626",
+};
+const workflowThemes = {
+  "consulting-blue-outline": {
+    background: "#ffffff",
+    laneLine: "#d8dde6",
+    laneLabel: "#44546a",
+    timeLine: "#e3e7ee",
+    timeLabel: "#6f7f95",
+    edge: themeColor.consultingBlue,
+    nodeFill: "#ffffff",
+    nodeStroke: themeColor.consultingBlue,
+    nodeText: themeColor.consultingText,
+    title: themeColor.consultingText,
+  },
+  "consulting-blue-fill": {
+    background: "#ffffff",
+    laneLine: "#d8dde6",
+    laneLabel: "#44546a",
+    timeLine: "#e3e7ee",
+    timeLabel: "#6f7f95",
+    edge: themeColor.consultingBlue,
+    nodeFill: themeColor.consultingBlue,
+    nodeStroke: themeColor.consultingBlue,
+    nodeText: "#ffffff",
+    title: themeColor.consultingText,
+  },
+  "consulting-gray-outline": {
+    background: "#ffffff",
+    laneLine: "#d7d7d7",
+    laneLabel: themeColor.gray,
+    timeLine: "#e5e5e5",
+    timeLabel: "#7f7f7f",
+    edge: themeColor.gray,
+    nodeFill: "#ffffff",
+    nodeStroke: themeColor.gray,
+    nodeText: themeColor.grayText,
+    title: themeColor.grayText,
+  },
+  "consulting-gray-fill": {
+    background: "#ffffff",
+    laneLine: "#d7d7d7",
+    laneLabel: themeColor.gray,
+    timeLine: "#e5e5e5",
+    timeLabel: "#7f7f7f",
+    edge: themeColor.gray,
+    nodeFill: themeColor.gray,
+    nodeStroke: themeColor.gray,
+    nodeText: "#ffffff",
+    title: themeColor.grayText,
+  },
+};
 
 export class WorkflowError extends Error {
   constructor(message, line = null) {
@@ -134,6 +191,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     nodeHeight: 42,
     ...options,
   };
+  const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
   const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
   const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
   const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
@@ -203,21 +261,21 @@ export function renderWorkflowSvg(workflow, options = {}) {
   <title id="workflow-title">${escapeXml(workflow.title)}</title>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M 0 0 L 8 3 L 0 6 z" fill="#d24726" />
+      <path d="M 0 0 L 8 3 L 0 6 z" fill="${theme.edge}" />
     </marker>
     <style>
-      svg { background: #fffdfb; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      .lane-line { stroke: #ded9d2; stroke-width: 1; }
-      .lane-label { fill: #66615c; font-size: 14px; font-weight: 700; }
-      .time-line { stroke: #e5dfd8; stroke-width: 1; stroke-dasharray: 4 8; }
-      .time-label { fill: #8b8580; font-size: 12px; font-weight: 700; text-anchor: middle; }
-      .edge { fill: none; stroke: #d24726; stroke-width: 2.4; }
+      svg { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .lane-line { stroke: ${theme.laneLine}; stroke-width: 1; }
+      .lane-label { fill: ${theme.laneLabel}; font-size: 14px; font-weight: 700; }
+      .time-line { stroke: ${theme.timeLine}; stroke-width: 1; stroke-dasharray: 4 8; }
+      .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
+      .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
       .edge-dotted { stroke-dasharray: 7 7; }
-      .node rect { fill: #ffffff; stroke: #d24726; stroke-width: 2; }
-      .node text { fill: #242424; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+      .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
+      .node text { fill: ${theme.nodeText}; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
     </style>
   </defs>
-  <text x="24" y="38" fill="#242424" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
+  <text x="24" y="38" fill="${theme.title}" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
   ${gridLines.join("")}
   ${laneRows.join("")}
   ${edges.join("")}

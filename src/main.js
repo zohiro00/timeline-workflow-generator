@@ -66,10 +66,15 @@ const settingsSchema = [
       {
         id: "themeHint",
         label: "配色プリセット",
-        description: "PowerPoint標準カラーをベースにした白背景テーマ",
+        description: "資料向けのSVG配色テーマ",
         type: "select",
-        value: "powerpoint",
-        options: [{ value: "powerpoint", label: "PowerPoint Orange" }],
+        value: "consulting-blue-outline",
+        options: [
+          { value: "consulting-blue-outline", label: "濃い青 / 枠線" },
+          { value: "consulting-blue-fill", label: "濃い青 / 塗りつぶし" },
+          { value: "consulting-gray-outline", label: "灰色 / 枠線" },
+          { value: "consulting-gray-fill", label: "灰色 / 塗りつぶし" },
+        ],
       },
       {
         id: "autoRender",
@@ -249,7 +254,7 @@ function renderEnginePage() {
 
       <footer class="statusbar">
         <span id="status-summary">Ready</span>
-        <span>PowerPoint Orange</span>
+        <span id="theme-label">濃い青 / 枠線</span>
         <span class="statusbar-spacer"></span>
         <span>UTF-8</span>
         <span>SVG</span>
@@ -440,6 +445,7 @@ function mountEngine() {
   }
 
   function render() {
+    updateThemeLabel();
     try {
       const workflow = layoutWorkflow(parseWorkflow(source.value));
       currentSvg = renderWorkflowSvg(workflow, pickWorkflowOptions());
@@ -464,7 +470,15 @@ function mountEngine() {
       gridYSize: settings.gridYSize,
       nodeWidth: settings.nodeWidth,
       nodeHeight: settings.nodeHeight,
+      theme: settings.themeHint,
     };
+  }
+
+  function updateThemeLabel() {
+    const themeLabel = document.querySelector("#theme-label");
+    const themeSetting = settingsSchema.flatMap((group) => group.items).find((item) => item.id === "themeHint");
+    const selectedOption = themeSetting.options.find((option) => option.value === settings.themeHint);
+    themeLabel.textContent = selectedOption?.label ?? "濃い青 / 枠線";
   }
 
   function restoreDefaultSettings() {
