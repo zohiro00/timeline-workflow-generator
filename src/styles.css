@@ -797,6 +797,10 @@ svg {
   font-size: 11px;
 }
 
+.preview-pane .pane-toolbar {
+  justify-content: space-between;
+}
+
 .breadcrumb {
   flex: 1;
   min-width: 0;
@@ -824,6 +828,33 @@ svg {
 .icon-btn:hover {
   color: var(--text);
   background: #ece8e2;
+}
+
+.icon-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.icon-btn:disabled:hover {
+  color: var(--muted);
+  background: transparent;
+}
+
+.preview-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.zoom-value {
+  min-width: 46px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .editor-body {
@@ -962,10 +993,19 @@ svg {
   background-size: 24px 24px;
 }
 
-.preview-canvas svg {
-  min-width: 720px;
-  width: 100%;
-  height: auto;
+.preview-viewport {
+  position: relative;
+  margin: 0 auto;
+}
+
+.preview-art {
+  position: absolute;
+  inset: 0;
+  transform-origin: top left;
+}
+
+.preview-art svg {
+  min-width: 0;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: var(--shadow);
