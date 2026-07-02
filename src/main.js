@@ -4,8 +4,36 @@ import "./styles.css";
 
 const settingsSchema = [
   {
+    id: "style",
+    title: "Style",
+    initiallyExpanded: true,
+    items: [
+      {
+        id: "themeHint",
+        label: "配色プリセット",
+        description: "資料向けのSVG配色テーマ",
+        type: "select",
+        value: "consulting-blue-outline",
+        options: [
+          { value: "consulting-blue-outline", label: "濃い青 / 枠線" },
+          { value: "consulting-blue-fill", label: "濃い青 / 塗りつぶし" },
+          { value: "consulting-gray-outline", label: "灰色 / 枠線" },
+          { value: "consulting-gray-fill", label: "灰色 / 塗りつぶし" },
+        ],
+      },
+      {
+        id: "autoRender",
+        label: "自動プレビュー",
+        description: "入力と同時にSVGを更新",
+        type: "toggle",
+        value: true,
+      },
+    ],
+  },
+  {
     id: "canvas",
     title: "Canvas",
+    initiallyExpanded: false,
     items: [
       {
         id: "gridXSize",
@@ -34,6 +62,7 @@ const settingsSchema = [
   {
     id: "nodes",
     title: "Nodes",
+    initiallyExpanded: false,
     items: [
       {
         id: "nodeWidth",
@@ -56,32 +85,6 @@ const settingsSchema = [
         step: 2,
         value: 42,
         unit: "px",
-      },
-    ],
-  },
-  {
-    id: "style",
-    title: "Style",
-    items: [
-      {
-        id: "themeHint",
-        label: "配色プリセット",
-        description: "資料向けのSVG配色テーマ",
-        type: "select",
-        value: "consulting-blue-outline",
-        options: [
-          { value: "consulting-blue-outline", label: "濃い青 / 枠線" },
-          { value: "consulting-blue-fill", label: "濃い青 / 塗りつぶし" },
-          { value: "consulting-gray-outline", label: "灰色 / 枠線" },
-          { value: "consulting-gray-fill", label: "灰色 / 塗りつぶし" },
-        ],
-      },
-      {
-        id: "autoRender",
-        label: "自動プレビュー",
-        description: "入力と同時にSVGを更新",
-        type: "toggle",
-        value: true,
       },
     ],
   },
@@ -290,9 +293,11 @@ function renderEnginePage() {
 }
 
 function renderSettingsGroup(group) {
+  const expanded = group.initiallyExpanded !== false;
+  const className = expanded ? "settings-group" : "settings-group collapsed";
   return `
-    <section class="settings-group" data-group="${group.id}">
-      <button class="settings-group-header" type="button" aria-expanded="true">
+    <section class="${className}" data-group="${group.id}">
+      <button class="settings-group-header" type="button" aria-expanded="${expanded}">
         <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
         ${group.title}
       </button>
