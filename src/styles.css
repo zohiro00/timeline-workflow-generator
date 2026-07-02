@@ -833,6 +833,88 @@ svg {
   background: #fff;
 }
 
+.workflow-examples {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.workflow-examples-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px 6px 8px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.workflow-examples-header:hover {
+  background: #ece8e2;
+}
+
+.workflow-examples.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
+.workflow-examples.collapsed .workflow-examples-body {
+  display: none;
+}
+
+.workflow-examples-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.workflow-example {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workflow-example:hover,
+.workflow-example:focus-visible {
+  border-color: var(--ppt-orange);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(210, 71, 38, 0.12);
+}
+
+.workflow-example-title {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-example-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .gutter {
   min-width: 54px;
   padding: 13px 10px 13px 14px;
@@ -967,6 +1049,10 @@ svg {
   .workspace {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(220px, var(--source-pane-size, 44%)) 10px minmax(220px, 1fr);
+  }
+
+  .workflow-examples-body {
+    grid-template-columns: 1fr;
   }
 
   .pane-resizer {

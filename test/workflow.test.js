@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sampleWorkflowSource } from "../src/sample-workflow.js";
+import { sampleWorkflowSource, workflowExamples } from "../src/sample-workflow.js";
 import { generateWorkflowSvg, layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
 
 const sample = sampleWorkflowSource;
@@ -17,6 +17,19 @@ test("parses workflow blocks from markdown", () => {
   assert.equal(workflow.nodes.length, 6);
   assert.equal(workflow.edges.length, 6);
   assert.equal(workflow.edges[3].type, "dotted");
+});
+
+test("example workflows parse and render", () => {
+  assert.equal(workflowExamples.length, 3);
+
+  for (const example of workflowExamples) {
+    const workflow = layoutWorkflow(parseWorkflow(example.source));
+    const svg = renderWorkflowSvg(workflow);
+
+    assert.equal(workflow.title, example.source.match(/^title:\s*(.+)$/m)?.[1]);
+    assert.ok(workflow.nodes.length >= 5);
+    assert.match(svg, /<svg/);
+  }
 });
 
 test("computes gridX by longest dependency path", () => {

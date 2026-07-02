@@ -49,6 +49,28 @@ test("engine editor starts with workflow DSL only", async () => {
   await page.close();
 });
 
+test("engine workflow examples can be expanded and applied", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const examples = page.locator(".workflow-example");
+  const toggle = page.locator("#examples-toggle");
+
+  assert.equal(await examples.count(), 3);
+  await page.getByRole("button", { name: /採用選考/ }).click();
+  assert.match(await page.locator("#source").inputValue(), /^title: 採用選考ワークフロー/);
+  await page.locator("#preview svg title").waitFor({ state: "attached" });
+  assert.equal(await page.locator("#preview svg title").textContent(), "採用選考ワークフロー");
+
+  await toggle.click();
+  assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+  await expectLocatorHidden(examples.first());
+
+  await toggle.click();
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  await expectLocatorVisible(examples.first());
+
+  await page.close();
+});
+
 test("engine settings can be restored to defaults", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const gridControl = page.locator('[data-setting="gridXSize"]');
@@ -156,6 +178,17 @@ async function expectSidebarOpen(page) {
   await page.waitForFunction(() => !document.querySelector(".engine-body")?.classList.contains("sidebar-collapsed"));
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");
   assert.ok((await sidebar.boundingBox()).width > 200);
+}
+
+async function expectLocatorHidden(locator) {
+  const box = await locator.boundingBox();
+  assert.equal(box, null);
+}
+
+async function expectLocatorVisible(locator) {
+  const box = await locator.boundingBox();
+  assert.ok(box?.width > 0);
+  assert.ok(box?.height > 0);
 }
 
 async function ensureDevServer() {

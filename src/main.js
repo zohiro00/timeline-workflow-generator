@@ -1,5 +1,5 @@
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "./workflow.js";
-import { sampleWorkflowSource } from "./sample-workflow.js";
+import { sampleWorkflowSource, workflowExamples } from "./sample-workflow.js";
 import "./styles.css";
 
 const settingsSchema = [
@@ -233,6 +233,15 @@ function renderEnginePage() {
               <div id="gutter" class="gutter" aria-hidden="true"></div>
               <textarea id="source" class="code-input" spellcheck="false" aria-label="workflow DSL"></textarea>
             </div>
+            <section class="workflow-examples" aria-label="Example workflows">
+              <button id="examples-toggle" class="workflow-examples-header" type="button" aria-expanded="true" aria-controls="workflow-examples-body">
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
+                <span>Example Workflows</span>
+              </button>
+              <div id="workflow-examples-body" class="workflow-examples-body">
+                ${workflowExamples.map(renderWorkflowExample).join("")}
+              </div>
+            </section>
           </section>
 
           <div class="pane-resizer" role="separator" tabindex="0" aria-label="エディターとプレビューのサイズ変更" aria-orientation="vertical"></div>
@@ -274,6 +283,15 @@ function renderSettingsGroup(group) {
         ${group.items.map(renderSetting).join("")}
       </div>
     </section>
+  `;
+}
+
+function renderWorkflowExample(example) {
+  return `
+    <button class="workflow-example" type="button" data-workflow-example="${example.id}">
+      <span class="workflow-example-title">${escapeHtml(example.title)}</span>
+      <span class="workflow-example-desc">${escapeHtml(example.description)}</span>
+    </button>
   `;
 }
 
@@ -325,6 +343,8 @@ function mountEngine() {
   const workspace = document.querySelector(".workspace");
   const sourcePane = document.querySelector(".source-pane");
   const paneResizer = document.querySelector(".pane-resizer");
+  const examplesToggle = document.querySelector("#examples-toggle");
+  const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
@@ -343,6 +363,7 @@ function mountEngine() {
   settingsToggle.addEventListener("click", toggleSettingsSidebar);
   paneResizer.addEventListener("pointerdown", startPaneResize);
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
+  examplesToggle.addEventListener("click", toggleWorkflowExamples);
   updatePaneResizerOrientation();
   window.addEventListener("resize", updatePaneResizerOrientation);
 
@@ -369,6 +390,16 @@ function mountEngine() {
     });
   });
 
+  document.querySelectorAll("[data-workflow-example]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const example = workflowExamplesById.get(button.dataset.workflowExample);
+      if (!example) return;
+      source.value = example.source;
+      updateGutter();
+      render();
+    });
+  });
+
   updateGutter();
   render();
 
@@ -376,6 +407,12 @@ function mountEngine() {
     const collapsed = engineBody.classList.toggle("sidebar-collapsed");
     settingsToggle.classList.toggle("active", !collapsed);
     settingsToggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  function toggleWorkflowExamples() {
+    const panel = examplesToggle.closest(".workflow-examples");
+    const collapsed = panel.classList.toggle("collapsed");
+    examplesToggle.setAttribute("aria-expanded", String(!collapsed));
   }
 
   function updatePaneResizerOrientation() {
@@ -519,4 +556,12 @@ function debounce(callback, delay) {
     clearTimeout(timerId);
     timerId = setTimeout(() => callback(...args), delay);
   };
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
