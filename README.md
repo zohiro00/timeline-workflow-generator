@@ -78,3 +78,26 @@ DSLの詳しい仕様、エラー例、PowerPointでの使い方は [docs/dsl.md
 ## Later
 
 VS Code拡張化を見据えて、コア処理はDOMに依存しない純粋なJavaScriptモジュールとして分離しています。
+
+## Cloudflare Workers への公開
+
+このリポジトリは、GitHub Actions から Cloudflare Workers Assets へ `dist/` をデプロイします。
+
+### 初回セットアップ
+
+1. Cloudflare ダッシュボードで API トークンを発行する
+   - テンプレートは `Edit Cloudflare Workers`、または Workers の編集権限を付与
+2. GitHub リポジトリの `Settings` → `Secrets and variables` → `Actions` に `CLOUDFLARE_API_TOKEN` を追加する
+3. Cloudflare Workers 側で `timeline-workflow-generator` の custom domain を設定する
+
+### デプロイ
+
+`main` ブランチへマージされると、`.github/workflows/deploy-workers.yml` が以下を実行して公開します。
+
+```bash
+pnpm install --frozen-lockfile
+pnpm test
+pnpm run build
+```
+
+Actions タブから `Deploy to Cloudflare Workers` を手動実行することもできます。
