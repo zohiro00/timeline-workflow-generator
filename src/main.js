@@ -89,6 +89,11 @@ const settingsSchema = [
 
 const defaultSettings = Object.fromEntries(settingsSchema.flatMap((group) => group.items.map((item) => [item.id, item.value])));
 const settings = { ...defaultSettings };
+const previewZoomConfig = Object.freeze({
+  min: 0.25,
+  max: 2.5,
+  step: 0.1,
+});
 
 document.querySelector("#app").innerHTML = location.pathname.startsWith("/engine")
   ? renderEnginePage()
@@ -255,6 +260,18 @@ function renderEnginePage() {
             </div>
             <div class="pane-toolbar">
               <div id="status" class="status" role="status"></div>
+              <div class="preview-tools" aria-label="Preview zoom controls">
+                <button id="preview-zoom-out" class="icon-btn" type="button" aria-label="プレビューを縮小" data-tooltip="Zoom out">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3" /><circle cx="11" cy="11" r="7" /><path d="M8 11h6" /></svg>
+                </button>
+                <output id="preview-zoom-value" class="zoom-value" aria-label="現在のプレビュー倍率">100%</output>
+                <button id="preview-zoom-in" class="icon-btn" type="button" aria-label="プレビューを拡大" data-tooltip="Zoom in">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3" /><circle cx="11" cy="11" r="7" /><path d="M11 8v6M8 11h6" /></svg>
+                </button>
+                <button id="preview-zoom-reset" class="icon-btn" type="button" aria-label="プレビュー倍率をリセット" data-tooltip="Reset zoom">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
+                </button>
+              </div>
             </div>
             <div id="preview" class="preview-canvas"></div>
           </section>
@@ -335,6 +352,10 @@ function mountEngine() {
   const status = document.querySelector("#status");
   const statusSummary = document.querySelector("#status-summary");
   const preview = document.querySelector("#preview");
+  const previewZoomOut = document.querySelector("#preview-zoom-out");
+  const previewZoomIn = document.querySelector("#preview-zoom-in");
+  const previewZoomReset = document.querySelector("#preview-zoom-reset");
+  const previewZoomValue = document.querySelector("#preview-zoom-value");
   const download = document.querySelector("#download-svg");
   const restoreSample = document.querySelector("#format-sample");
   const resetSettings = document.querySelector("#reset-settings");
@@ -345,6 +366,7 @@ function mountEngine() {
   const paneResizer = document.querySelector(".pane-resizer");
   const examplesToggle = document.querySelector("#examples-toggle");
   const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
+  const previewZoom = { scale: 1, mode: "fit" };
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
@@ -360,12 +382,18 @@ function mountEngine() {
   });
   resetSettings.addEventListener("click", restoreDefaultSettings);
   download.addEventListener("click", downloadSvg);
+  previewZoomOut.addEventListener("click", () => setPreviewZoom(previewZoom.scale - previewZoomConfig.step, "manual"));
+  previewZoomIn.addEventListener("click", () => setPreviewZoom(previewZoom.scale + previewZoomConfig.step, "manual"));
+  previewZoomReset.addEventListener("click", resetPreviewZoom);
   settingsToggle.addEventListener("click", toggleSettingsSidebar);
   paneResizer.addEventListener("pointerdown", startPaneResize);
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
   examplesToggle.addEventListener("click", toggleWorkflowExamples);
   updatePaneResizerOrientation();
   window.addEventListener("resize", updatePaneResizerOrientation);
+  new ResizeObserver(() => {
+    if (previewZoom.mode === "fit") resetPreviewZoom();
+  }).observe(preview);
 
   document.querySelectorAll("[data-setting]").forEach((control) => {
     control.addEventListener("input", () => {
@@ -486,7 +514,8 @@ function mountEngine() {
     try {
       const workflow = layoutWorkflow(parseWorkflow(source.value));
       currentSvg = renderWorkflowSvg(workflow, pickWorkflowOptions());
-      preview.innerHTML = currentSvg;
+      preview.innerHTML = `<div class="preview-viewport"><div class="preview-art">${currentSvg}</div></div>`;
+      syncPreviewZoom();
       status.className = "status ok";
       status.textContent = `${workflow.nodes.length} nodes / ${workflow.edges.length} edges / ${workflow.lanes.length} lanes`;
       statusSummary.textContent = "Preview updated";
@@ -494,6 +523,7 @@ function mountEngine() {
     } catch (error) {
       currentSvg = "";
       preview.innerHTML = `<div class="empty-state">構文を確認してください</div>`;
+      updatePreviewZoomControls();
       status.className = "status error";
       status.textContent = error instanceof WorkflowError ? error.message : String(error);
       statusSummary.textContent = "Error";
@@ -533,6 +563,79 @@ function mountEngine() {
     render();
   }
 
+  function resetPreviewZoom() {
+    const fitScale = calculatePreviewFitScale();
+    previewZoom.mode = "fit";
+    setPreviewZoom(fitScale, "fit");
+  }
+
+  function syncPreviewZoom() {
+    if (previewZoom.mode === "fit") {
+      resetPreviewZoom();
+      return;
+    }
+    setPreviewZoom(previewZoom.scale, "manual");
+  }
+
+  function setPreviewZoom(scale, mode) {
+    const dimensions = getPreviewSvgDimensions();
+    const viewport = preview.querySelector(".preview-viewport");
+    const art = preview.querySelector(".preview-art");
+    const svg = preview.querySelector("svg");
+
+    if (!dimensions || !viewport || !art || !svg) {
+      updatePreviewZoomControls();
+      return;
+    }
+
+    const nextScale = clamp(scale, previewZoomConfig.min, previewZoomConfig.max);
+    previewZoom.scale = nextScale;
+    previewZoom.mode = mode;
+
+    art.style.width = `${dimensions.width}px`;
+    art.style.height = `${dimensions.height}px`;
+    art.style.transform = `scale(${nextScale})`;
+    viewport.style.width = `${Math.round(dimensions.width * nextScale)}px`;
+    viewport.style.height = `${Math.round(dimensions.height * nextScale)}px`;
+    svg.style.width = `${dimensions.width}px`;
+    svg.style.height = `${dimensions.height}px`;
+    updatePreviewZoomControls();
+  }
+
+  function calculatePreviewFitScale() {
+    const dimensions = getPreviewSvgDimensions();
+    if (!dimensions) return 1;
+
+    const styles = getComputedStyle(preview);
+    const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+    const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const availableWidth = Math.max(1, preview.clientWidth - horizontalPadding);
+    const availableHeight = Math.max(1, preview.clientHeight - verticalPadding);
+    return clamp(
+      Math.min(1, availableWidth / dimensions.width, availableHeight / dimensions.height),
+      previewZoomConfig.min,
+      previewZoomConfig.max,
+    );
+  }
+
+  function getPreviewSvgDimensions() {
+    const svg = preview.querySelector("svg");
+    const viewBox = svg?.viewBox?.baseVal;
+    if (!svg || !viewBox?.width || !viewBox?.height) return null;
+    return {
+      width: viewBox.width,
+      height: viewBox.height,
+    };
+  }
+
+  function updatePreviewZoomControls() {
+    const hasPreview = Boolean(preview.querySelector("svg"));
+    previewZoomOut.disabled = !hasPreview || previewZoom.scale <= previewZoomConfig.min;
+    previewZoomIn.disabled = !hasPreview || previewZoom.scale >= previewZoomConfig.max;
+    previewZoomReset.disabled = !hasPreview;
+    previewZoomValue.value = hasPreview ? `${Math.round(previewZoom.scale * 100)}%` : "";
+  }
+
   function updateGutter() {
     const lines = source.value.split(/\r?\n/).length;
     gutter.innerHTML = Array.from({ length: lines }, (_, index) => `<div>${index + 1}</div>`).join("");
@@ -548,6 +651,10 @@ function mountEngine() {
     anchor.click();
     URL.revokeObjectURL(url);
   }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function debounce(callback, delay) {

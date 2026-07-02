@@ -121,6 +121,32 @@ test("engine theme preset updates the rendered svg", async () => {
   await page.close();
 });
 
+test("engine preview fits the rendered svg and supports zoom reset", async () => {
+  const page = await openEnginePage({ width: 980, height: 760 });
+  const preview = page.locator("#preview");
+  const viewport = page.locator(".preview-viewport");
+  const zoomIn = page.locator("#preview-zoom-in");
+  const reset = page.locator("#preview-zoom-reset");
+
+  const initialMetrics = await readPreviewMetrics(page);
+  assert.ok(initialMetrics.viewportWidth <= initialMetrics.availableWidth + 1);
+  assert.ok(initialMetrics.viewportHeight <= initialMetrics.availableHeight + 1);
+  assert.match(await page.locator("#preview-zoom-value").textContent(), /^\d+%$/);
+
+  await zoomIn.click();
+  const zoomedBox = await viewport.boundingBox();
+  assert.ok(zoomedBox.width > initialMetrics.viewportWidth);
+
+  await reset.click();
+  const resetMetrics = await readPreviewMetrics(page);
+  assert.ok(Math.abs(resetMetrics.viewportWidth - initialMetrics.viewportWidth) <= 2);
+  assert.ok(Math.abs(resetMetrics.viewportHeight - initialMetrics.viewportHeight) <= 2);
+  assert.equal(await reset.isDisabled(), false);
+  assert.equal(await preview.locator("svg").count(), 1);
+
+  await page.close();
+});
+
 test("engine panes can be resized horizontally on desktop", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const sourcePane = page.locator(".source-pane");
@@ -189,6 +215,22 @@ async function expectLocatorVisible(locator) {
   const box = await locator.boundingBox();
   assert.ok(box?.width > 0);
   assert.ok(box?.height > 0);
+}
+
+async function readPreviewMetrics(page) {
+  return await page.evaluate(() => {
+    const preview = document.querySelector("#preview");
+    const viewport = document.querySelector(".preview-viewport");
+    const styles = getComputedStyle(preview);
+    const availableWidth = preview.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+    const availableHeight = preview.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom);
+    return {
+      availableWidth,
+      availableHeight,
+      viewportWidth: viewport.getBoundingClientRect().width,
+      viewportHeight: viewport.getBoundingClientRect().height,
+    };
+  });
 }
 
 async function ensureDevServer() {
