@@ -3,6 +3,7 @@
 # Required GitHub Secret:
 #   CLOUDFLARE_API_TOKEN - create at https://dash.cloudflare.com/profile/api-tokens
 #   Use the "Edit Cloudflare Workers" template, or grant Workers:Edit permission.
+#   CLOUDFLARE_ACCOUNT_ID - set to the Cloudflare account ID that owns the Worker.
 
 name: Deploy to Cloudflare Workers
 
@@ -51,3 +52,4 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

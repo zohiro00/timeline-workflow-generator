@@ -87,8 +87,9 @@ VS Code拡張化を見据えて、コア処理はDOMに依存しない純粋なJ
 
 1. Cloudflare ダッシュボードで API トークンを発行する
    - テンプレートは `Edit Cloudflare Workers`、または Workers の編集権限を付与
-2. GitHub リポジトリの `Settings` → `Secrets and variables` → `Actions` に `CLOUDFLARE_API_TOKEN` を追加する
-3. Cloudflare Workers 側で `timeline-workflow-generator` の custom domain を設定する
+2. Cloudflare ダッシュボードで Account ID を確認する
+3. GitHub リポジトリの `Settings` → `Secrets and variables` → `Actions` に `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を追加する
+4. Cloudflare Workers 側で `timeline-workflow-generator` の custom domain を設定する
 
 ### デプロイ
 
