@@ -49,6 +49,25 @@ test("engine editor starts with workflow DSL only", async () => {
   await page.close();
 });
 
+test("engine settings start with style first and layout groups collapsed", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const groups = page.locator(".settings-group");
+
+  assert.deepEqual(await groups.evaluateAll((items) => items.map((item) => item.dataset.group)), [
+    "style",
+    "canvas",
+    "nodes",
+  ]);
+  assert.equal(await page.locator('[data-group="style"] .settings-group-header').getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator('[data-group="canvas"] .settings-group-header').getAttribute("aria-expanded"), "false");
+  assert.equal(await page.locator('[data-group="nodes"] .settings-group-header').getAttribute("aria-expanded"), "false");
+  await expectLocatorVisible(page.locator('[data-group="style"] .settings-body'));
+  await expectLocatorHidden(page.locator('[data-group="canvas"] .settings-body'));
+  await expectLocatorHidden(page.locator('[data-group="nodes"] .settings-body'));
+
+  await page.close();
+});
+
 test("engine workflow examples can be expanded and applied", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const examples = page.locator(".workflow-example");
@@ -78,6 +97,8 @@ test("engine settings can be restored to defaults", async () => {
   const themeControl = page.locator('[data-setting="themeHint"]');
   const reset = page.locator("#reset-settings");
 
+  await page.locator('[data-group="canvas"] .settings-group-header').click();
+  await page.locator('[data-group="nodes"] .settings-group-header').click();
   await gridControl.fill("224");
   await nodeControl.fill("156");
   await themeControl.selectOption("consulting-gray-outline");
