@@ -82,6 +82,7 @@ VS Code拡張化を見据えて、コア処理はDOMに依存しない純粋なJ
 ## Cloudflare Workers への公開
 
 このリポジトリは、GitHub Actions から Cloudflare Workers Assets へ `dist/` をデプロイします。
+詳しい手順とトラブルシュートは [docs/development/cloudflare-workers-deploy.md](docs/development/cloudflare-workers-deploy.md) を参照してください。
 
 ### 初回セットアップ
 
