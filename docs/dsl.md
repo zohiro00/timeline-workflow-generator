@@ -1,102 +1,106 @@
-# DSL仕様
+# ワークフロー記法仕様
 
-Timeline Workflow Generator は、Markdown内の `workflow` コードブロック、またはDSL本文から時系列ワークフロー図を生成します。
+Timeline Workflow Generator は、Markdown内の `workflow` コードブロック、またはMarkdown本文から時系列ワークフロー図を生成します。
 ノードの横位置は依存関係から自動計算されるため、座標や余白を手で指定する必要はありません。
 
 ## 最小例
 
 ```workflow
-title: 申請ワークフローの時系列図
+# 申請ワークフローの時系列図
 
-lane: 申請者
-lane: 承認者
+## lanes
+- requester: 申請者
+- approver: 承認者
 
-node a1: 作成 (lane: 申請者)
-node a2: 提出 (lane: 申請者)
-node b1: 承認 (lane: 承認者)
+## nodes
+- requester
+  - a1: 作成
+  - a2: 提出
+- approver
+  - b1: 承認
 
-a1 -> a2 -> b1
+## workflow
+- a1 -> a2 -> b1
 ```
 
 ## Markdownで使う
 
-Markdown文書の中では、`workflow` コードブロックにDSLを書きます。
+Markdown文書の中では、`workflow` コードブロックにワークフローを書きます。
 
 ````markdown
 ```workflow
-title: 申請ワークフローの時系列図
+# 申請ワークフローの時系列図
 
-lane: 申請者
-lane: 承認者
+## lanes
+- requester: 申請者
+- approver: 承認者
 
-node a1: 作成 (lane: 申請者)
-node b1: 承認 (lane: 承認者)
+## nodes
+- requester
+  - a1: 作成
+- approver
+  - b1: 承認
 
-a1 -> b1
+## workflow
+- a1 -> b1
 ```
 ````
 
 複数の `workflow` コードブロックがある場合、現在は先頭の1件だけをSVG生成に使います。
 
-## title
+## タイトル
 
-図のタイトルを指定します。
-
-```workflow
-title: 障害対応フロー
-```
-
-`title:` を省略した場合は、既定のタイトル `時系列ワークフロー` が使われます。
-
-## lane
-
-レーンを上から順に定義します。
+最初の `# タイトル` を図のタイトルとして扱います。
 
 ```workflow
-lane: 受付
-lane: 調査
-lane: 復旧
+# 障害対応フロー
 ```
 
-同じレーン名を複数回定義することはできません。
+タイトルを省略した場合は、既定のタイトル `時系列ワークフロー` が使われます。
 
-## node
+## lanes
 
-ノードは、ID、表示名、所属レーンを指定します。
+`## lanes` セクションで、レーンを上から順に定義します。
 
 ```workflow
-node a1: 問い合わせ受付 (lane: 受付)
+## lanes
+- reception: 受付
+- investigation: 調査
+- recovery: 復旧
 ```
 
-形式は次の通りです。
+形式は `- laneId: laneLabel` です。lane ID に使える文字は、半角英数字、`_`、`-` です。
+同じ lane ID を複数回定義することはできません。lane label は空にできません。
+
+## nodes
+
+`## nodes` セクションでノードを定義します。
+まず親の lane ID を `- laneId` で書き、その配下に2スペースインデントで `- nodeId: nodeLabel` を書きます。
 
 ```workflow
-node id: 表示名 (lane: レーン名)
+## nodes
+- reception
+  - a1: 問い合わせ受付
+  - a2: 一次確認
+- recovery
+  - b1: 復旧作業
 ```
 
+ノードは親の lane ID に所属します。
 ノードIDに使える文字は、半角英数字、`_`、`-` です。
+同じノードIDを複数回定義することはできません。node label は空にできません。
+
+## workflow
+
+`## workflow` セクションで依存関係をMarkdownリストとして定義します。
 
 ```workflow
-node step-1: 作成 (lane: 申請者)
-node review_1: 確認 (lane: 承認者)
+## workflow
+- a1 -> a2
+- a2 -.-> b1
 ```
 
-同じノードIDを複数回定義することはできません。ノードが参照するレーンは、先に `lane:` で定義しておく必要があります。
-
-## edge
-
-実線の矢印は `->` で書きます。
-
-```workflow
-a1 -> a2
-```
-
-点線の矢印は `-.->` で書きます。
-
-```workflow
-a2 -.-> a4
-```
-
+実線の矢印は `->`、点線の矢印は `-.->` で書きます。
 矢印の両端には、定義済みのノードIDを指定します。
 
 ## チェーン
@@ -104,70 +108,80 @@ a2 -.-> a4
 連続する依存関係は、1行にまとめて書けます。
 
 ```workflow
-a1 -> a2 -> b1 -> b2
+- a1 -> a2 -> b1 -> b2
 ```
 
 これは次と同じ意味です。
 
 ```workflow
-a1 -> a2
-a2 -> b1
-b1 -> b2
+- a1 -> a2
+- a2 -> b1
+- b1 -> b2
 ```
 
 ## コメント
 
-`#` 以降はコメントとして扱われます。
+`%%` 以降はコメントとして扱われます。`#` はMarkdown見出しとして使うため、コメント扱いしません。
 
 ```workflow
-lane: 申請者 # 上段のレーン
-node a1: 作成 (lane: 申請者) # 最初の作業
+## lanes
+- requester: 申請者 %% 上段のレーン
 ```
 
 ## エラー例
 
+必須セクションがない場合:
+
+```workflow
+# 申請ワークフロー
+```
+
 レーン名が空の場合:
 
 ```workflow
-lane:
+## lanes
+- requester:
 ```
 
 ノードの形式が違う場合:
 
 ```workflow
-node a1 作成 lane: 申請者
+## nodes
+- requester
+- a1: 作成
 ```
 
-未定義レーンを参照した場合:
+未定義レーンを使った場合:
 
 ```workflow
-lane: 申請者
-node a1: 作成 (lane: 承認者)
+## lanes
+- requester: 申請者
+
+## nodes
+- approver
+  - a1: 承認
 ```
 
 未定義ノードへ矢印を引いた場合:
 
 ```workflow
-lane: 申請者
-node a1: 作成 (lane: 申請者)
-a1 -> a2
+## workflow
+- a1 -> a2
 ```
 
 循環依存がある場合:
 
 ```workflow
-lane: main
-node a: A (lane: main)
-node b: B (lane: main)
-a -> b
-b -> a
+## workflow
+- a -> b
+- b -> a
 ```
 
 循環依存があると時系列の横位置を決められないため、DAGになるように矢印を見直してください。
 
 ## PowerPointで使う流れ
 
-1. EngineでDSLを書く
+1. Engineでワークフローを書く
 2. プレビューで図を確認する
 3. SVGをダウンロードする
 4. PowerPointへドラッグ&ドロップする

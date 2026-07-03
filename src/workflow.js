@@ -1,4 +1,5 @@
 const EDGE_TOKEN_PATTERN = /(-\.->|->)/g;
+const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
 const defaultThemeId = "consulting-blue-outline";
 const themeColor = {
   consultingBlue: "#1f4e79",
@@ -88,46 +89,83 @@ export function parseWorkflow(input) {
   const nodes = new Map();
   const edges = [];
   let title = "時系列ワークフロー";
+  let currentSection = null;
+  let currentNodeLaneId = null;
+  const seenSections = new Set();
 
   source.split(/\r?\n/).forEach((rawLine, index) => {
     const lineNo = lineOffset + index + 1;
-    const line = stripComment(rawLine).trim();
-    if (!line) return;
+    const withoutComment = stripComment(rawLine);
+    const trimmed = withoutComment.trim();
+    if (!trimmed) return;
 
-    if (line.startsWith("title:")) {
-      title = line.slice("title:".length).trim() || title;
+    if (trimmed.startsWith("# ")) {
+      const nextTitle = trimmed.slice(2).trim();
+      if (!nextTitle) throw new WorkflowError("タイトルが空です。", lineNo);
+      title = nextTitle;
       return;
     }
 
-    if (line.startsWith("lane:")) {
-      const name = line.slice("lane:".length).trim();
-      if (!name) throw new WorkflowError("レーン名が空です。", lineNo);
-      if (laneSet.has(name)) throw new WorkflowError(`レーン "${name}" が重複しています。`, lineNo);
-      laneSet.add(name);
-      lanes.push(name);
-      return;
-    }
-
-    if (line.startsWith("node ")) {
-      const match = line.match(/^node\s+([A-Za-z0-9_-]+)\s*:\s*(.+?)\s*\(\s*lane\s*:\s*(.+?)\s*\)\s*$/);
-      if (!match) {
-        throw new WorkflowError("ノードは `node id: 表示名 (lane: レーン名)` の形式で記述してください。", lineNo);
+    if (trimmed.startsWith("## ")) {
+      const section = trimmed.slice(3).trim().toLowerCase();
+      if (!WORKFLOW_SECTIONS.has(section)) {
+        throw new WorkflowError("セクションは `## lanes`、`## nodes`、`## workflow` のいずれかで記述してください。", lineNo);
       }
-      const [, id, label, lane] = match.map((value) => value.trim());
-      if (nodes.has(id)) throw new WorkflowError(`ノードID "${id}" が重複しています。`, lineNo);
-      nodes.set(id, { id, label, lane, gridX: 0, gridY: 0 });
+      currentSection = section;
+      currentNodeLaneId = null;
+      seenSections.add(section);
       return;
     }
 
-    if (line.includes("->")) {
-      edges.push(...parseEdgeChain(line, lineNo));
+    if (!currentSection) {
+      throw new WorkflowError("`## lanes`、`## nodes`、`## workflow` のいずれかのセクション内に記述してください。", lineNo);
+    }
+
+    if (currentSection === "lanes") {
+      const match = trimmed.match(/^-\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      if (!match) throw new WorkflowError("レーンは `- laneId: レーン名` の形式で記述してください。", lineNo);
+      const [, id, rawLabel] = match;
+      const label = rawLabel.trim();
+      if (!label) throw new WorkflowError("レーン名が空です。", lineNo);
+      if (laneSet.has(id)) throw new WorkflowError(`レーンID "${id}" が重複しています。`, lineNo);
+      laneSet.add(id);
+      lanes.push({ id, label });
+      return;
+    }
+
+    if (currentSection === "nodes") {
+      const nodeMatch = withoutComment.match(/^  -\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      if (nodeMatch) {
+        const [, id, rawLabel] = nodeMatch;
+        const label = rawLabel.trim();
+        if (!currentNodeLaneId) throw new WorkflowError("ノードは所属レーンの配下に記述してください。", lineNo);
+        if (!label) throw new WorkflowError("ノード名が空です。", lineNo);
+        if (nodes.has(id)) throw new WorkflowError(`ノードID "${id}" が重複しています。`, lineNo);
+        nodes.set(id, { id, label, laneId: currentNodeLaneId, gridX: 0, gridY: 0 });
+        return;
+      }
+
+      const laneMatch = trimmed.match(/^-\s+([A-Za-z0-9_-]+)\s*$/);
+      if (laneMatch) {
+        const [, laneId] = laneMatch;
+        currentNodeLaneId = laneId;
+        return;
+      }
+
+      throw new WorkflowError("nodes は `- laneId` と、その配下の `  - nodeId: ノード名` の形式で記述してください。", lineNo);
+    }
+
+    if (currentSection === "workflow") {
+      const match = trimmed.match(/^-\s+(.+)$/);
+      if (!match) throw new WorkflowError("workflow は `- a -> b` の形式で記述してください。", lineNo);
+      edges.push(...parseEdgeChain(match[1].trim(), lineNo));
       return;
     }
 
     throw new WorkflowError("解釈できない行です。", lineNo);
   });
 
-  validateWorkflow({ lanes, nodes, edges });
+  validateWorkflow({ lanes, nodes, edges, seenSections });
 
   return {
     title,
@@ -138,7 +176,7 @@ export function parseWorkflow(input) {
 }
 
 export function layoutWorkflow(workflow) {
-  const laneIndex = new Map(workflow.lanes.map((lane, index) => [lane, index]));
+  const laneIndex = new Map(workflow.lanes.map((lane, index) => [lane.id, index]));
   const nodes = new Map(workflow.nodes.map((node) => [node.id, { ...node }]));
   const incoming = new Map(workflow.nodes.map((node) => [node.id, []]));
   const outgoing = new Map(workflow.nodes.map((node) => [node.id, []]));
@@ -170,7 +208,7 @@ export function layoutWorkflow(workflow) {
     const node = nodes.get(id);
     const parents = incoming.get(id);
     node.gridX = parents.length === 0 ? 0 : Math.max(...parents.map((parent) => nodes.get(parent).gridX)) + 1;
-    node.gridY = laneIndex.get(node.lane);
+    node.gridY = laneIndex.get(node.laneId);
   }
 
   return {
@@ -214,7 +252,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
   const laneRows = workflow.lanes.map((lane, index) => {
     const y = config.paddingTop + index * config.gridYSize + config.nodeHeight / 2;
     return `
-      <text class="lane-label" x="24" y="${y + 5}">${escapeXml(lane)}</text>
+      <text class="lane-label" x="24" y="${y + 5}">${escapeXml(lane.label)}</text>
       <line class="lane-line" x1="${config.paddingLeft - 18}" y1="${y}" x2="${width - config.paddingRight / 2}" y2="${y}" />`;
   });
 
@@ -235,7 +273,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     const y1 = fromPos.y + config.nodeHeight / 2;
     const x2 = toPos.x;
     const y2 = toPos.y + config.nodeHeight / 2;
-    const sameLane = from.lane === to.lane;
+    const sameLane = from.laneId === to.laneId;
     const forward = to.gridX > from.gridX;
     const laneGroupKey = `${from.gridY}:${to.gridY}`;
     const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
@@ -307,13 +345,16 @@ function parseEdgeChain(line, lineNo) {
   return edges;
 }
 
-function validateWorkflow({ lanes, nodes, edges }) {
-  if (lanes.length === 0) throw new WorkflowError("少なくとも1つの lane を定義してください。");
-  const laneSet = new Set(lanes);
+function validateWorkflow({ lanes, nodes, edges, seenSections }) {
+  if (!seenSections.has("lanes")) throw new WorkflowError("`## lanes` セクションを定義してください。");
+  if (!seenSections.has("nodes")) throw new WorkflowError("`## nodes` セクションを定義してください。");
+  if (!seenSections.has("workflow")) throw new WorkflowError("`## workflow` セクションを定義してください。");
+  if (lanes.length === 0) throw new WorkflowError("少なくとも1つのレーンを定義してください。");
+  const laneSet = new Set(lanes.map((lane) => lane.id));
 
   for (const node of nodes.values()) {
-    if (!laneSet.has(node.lane)) {
-      throw new WorkflowError(`ノード "${node.id}" のレーン "${node.lane}" が定義されていません。`);
+    if (!laneSet.has(node.laneId)) {
+      throw new WorkflowError(`ノード "${node.id}" のレーン "${node.laneId}" が定義されていません。`);
     }
   }
 
@@ -332,7 +373,7 @@ function connectorPath(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
 }
 
 function stripComment(line) {
-  const index = line.indexOf("#");
+  const index = line.indexOf("%%");
   return index === -1 ? line : line.slice(0, index);
 }
 

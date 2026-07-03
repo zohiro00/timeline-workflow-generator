@@ -38,17 +38,6 @@ test("engine settings sidebar can be collapsed and reopened", async () => {
   await page.close();
 });
 
-test("engine editor starts with workflow DSL only", async () => {
-  const page = await openEnginePage({ width: 1280, height: 820 });
-  const sourceValue = await page.locator("#source").inputValue();
-
-  assert.ok(sourceValue.startsWith("title: 申請ワークフローの時系列図"));
-  assert.doesNotMatch(sourceValue, /```workflow/);
-  assert.doesNotMatch(sourceValue, /Markdownの中に workflow ブロック/);
-
-  await page.close();
-});
-
 test("engine settings start with style first and layout groups collapsed", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const groups = page.locator(".settings-group");
@@ -68,6 +57,17 @@ test("engine settings start with style first and layout groups collapsed", async
   await page.close();
 });
 
+test("engine editor starts with markdown workflow only", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const sourceValue = await page.locator("#source").inputValue();
+
+  assert.ok(sourceValue.startsWith("# 申請ワークフローの時系列図"));
+  assert.doesNotMatch(sourceValue, /```workflow/);
+  assert.doesNotMatch(sourceValue, /Markdownの中に workflow ブロック/);
+
+  await page.close();
+});
+
 test("engine workflow examples can be expanded and applied", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const examples = page.locator(".workflow-example");
@@ -75,7 +75,7 @@ test("engine workflow examples can be expanded and applied", async () => {
 
   assert.equal(await examples.count(), 3);
   await page.getByRole("button", { name: /採用選考/ }).click();
-  assert.match(await page.locator("#source").inputValue(), /^title: 採用選考ワークフロー/);
+  assert.match(await page.locator("#source").inputValue(), /^# 採用選考ワークフロー/);
   await page.locator("#preview svg title").waitFor({ state: "attached" });
   assert.equal(await page.locator("#preview svg title").textContent(), "採用選考ワークフロー");
 

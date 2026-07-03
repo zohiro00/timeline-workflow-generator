@@ -13,7 +13,18 @@ ${sample}
 test("parses workflow blocks from markdown", () => {
   const workflow = parseWorkflow(markdownSample);
   assert.equal(workflow.title, "申請ワークフローの時系列図");
-  assert.deepEqual(workflow.lanes, ["a申請", "b申請", "c申請"]);
+  assert.deepEqual(workflow.lanes, [
+    { id: "a", label: "a申請" },
+    { id: "b", label: "b申請" },
+    { id: "c", label: "c申請" },
+  ]);
+  assert.deepEqual(workflow.nodes.find((node) => node.id === "a1"), {
+    id: "a1",
+    label: "作成",
+    laneId: "a",
+    gridX: 0,
+    gridY: 0,
+  });
   assert.equal(workflow.nodes.length, 6);
   assert.equal(workflow.edges.length, 6);
   assert.equal(workflow.edges[3].type, "dotted");
@@ -26,10 +37,31 @@ test("example workflows parse and render", () => {
     const workflow = layoutWorkflow(parseWorkflow(example.source));
     const svg = renderWorkflowSvg(workflow);
 
-    assert.equal(workflow.title, example.source.match(/^title:\s*(.+)$/m)?.[1]);
+    assert.equal(workflow.title, example.source.match(/^#\s+(.+)$/m)?.[1]);
     assert.ok(workflow.nodes.length >= 5);
     assert.match(svg, /<svg/);
   }
+});
+
+test("keeps markdown headings and %% comments distinct", () => {
+  const workflow = parseWorkflow(`# コメントではないタイトル
+
+## lanes
+- main: メイン # ラベル内の文字 %% ここはコメント
+
+## nodes
+- main
+  - a: 作成 #1
+  - b: 承認
+
+## workflow
+- a -> b %% コメント
+`);
+
+  assert.equal(workflow.title, "コメントではないタイトル");
+  assert.deepEqual(workflow.lanes, [{ id: "main", label: "メイン # ラベル内の文字" }]);
+  assert.equal(workflow.nodes[0].label, "作成 #1");
+  assert.deepEqual(workflow.edges, [{ from: "a", to: "b", type: "solid" }]);
 });
 
 test("computes gridX by longest dependency path", () => {
@@ -41,18 +73,203 @@ test("computes gridX by longest dependency path", () => {
   assert.equal(nodes.get("b2").gridX, 3);
   assert.equal(nodes.get("a3").gridX, 2);
   assert.equal(nodes.get("a4").gridX, 3);
+  assert.equal(nodes.get("b1").gridY, 1);
 });
 
 test("rejects cyclic dependencies", () => {
   assert.throws(
-    () => layoutWorkflow(parseWorkflow(`
-lane: main
-node a: A (lane: main)
-node b: B (lane: main)
-a -> b
-b -> a
+    () => layoutWorkflow(parseWorkflow(`# Cycle
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+
+## workflow
+- a -> b
+- b -> a
 `)),
     WorkflowError,
+  );
+});
+
+test("rejects missing required sections", () => {
+  assert.throws(
+    () => parseWorkflow(`# Missing lanes
+
+## nodes
+- main
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /`## lanes` セクションを定義してください。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Missing nodes
+
+## lanes
+- main: Main
+
+## workflow
+- a -> a
+`),
+    /`## nodes` セクションを定義してください。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Missing workflow
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+`),
+    /`## workflow` セクションを定義してください。/,
+  );
+});
+
+test("rejects duplicate and empty lane definitions with line numbers", () => {
+  assert.throws(
+    () => parseWorkflow(`# Duplicate lane
+
+## lanes
+- main: Main
+- main: Other
+
+## nodes
+- main
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /Line 5: レーンID "main" が重複しています。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Empty lane
+
+## lanes
+- main:
+
+## nodes
+- main
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /Line 4: レーン名が空です。/,
+  );
+});
+
+test("rejects duplicate, empty, and unscoped node definitions", () => {
+  assert.throws(
+    () => parseWorkflow(`# Duplicate node
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - a: Other
+
+## workflow
+- a -> a
+`),
+    /Line 9: ノードID "a" が重複しています。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Empty node
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a:
+
+## workflow
+- a -> a
+`),
+    /Line 8: ノード名が空です。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Bad indent
+
+## lanes
+- main: Main
+
+## nodes
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /Line 7: ノードは所属レーンの配下に記述してください。/,
+  );
+});
+
+test("rejects undefined lanes and nodes", () => {
+  assert.throws(
+    () => parseWorkflow(`# Undefined lane
+
+## lanes
+- main: Main
+
+## nodes
+- missing
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /ノード "a" のレーン "missing" が定義されていません。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Undefined node
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+
+## workflow
+- a -> b
+`),
+    /エッジの終了ノード "b" が定義されていません。/,
+  );
+});
+
+test("rejects invalid lines with line numbers", () => {
+  assert.throws(
+    () => parseWorkflow(`# Invalid
+
+## lanes
+- main Main
+
+## nodes
+- main
+  - a: A
+
+## workflow
+- a -> a
+`),
+    /Line 4: レーンは `- laneId: レーン名` の形式で記述してください。/,
   );
 });
 
@@ -60,6 +277,7 @@ test("renders svg with labels and connectors", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
   assert.match(svg, /<svg/);
   assert.match(svg, /申請ワークフロー/);
+  assert.match(svg, /a申請/);
   assert.match(svg, /marker-end/);
   assert.match(svg, /edge-dotted/);
 });
@@ -110,15 +328,23 @@ test("keeps title and time labels vertically separated", () => {
 });
 
 test("separates multi-lane connector curves by lane pair", () => {
-  const crossingSample = `
-lane: top
-lane: bottom
-node a1: A1 (lane: top)
-node a2: A2 (lane: top)
-node b1: B1 (lane: bottom)
-node b2: B2 (lane: bottom)
-a1 -> b1
-a2 -> b2
+  const crossingSample = `# Crossing
+
+## lanes
+- top: Top
+- bottom: Bottom
+
+## nodes
+- top
+  - a1: A1
+  - a2: A2
+- bottom
+  - b1: B1
+  - b2: B2
+
+## workflow
+- a1 -> b1
+- a2 -> b2
 `;
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(crossingSample)));
 
@@ -127,10 +353,18 @@ a2 -> b2
 });
 
 test("escapes svg text content", () => {
-  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`
-title: <script>alert(1)</script>
-lane: <Lane & One>
-node a: <Node & One> (lane: <Lane & One>)
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# <script>alert(1)</script>
+
+## lanes
+- lane_1: <Lane & One>
+
+## nodes
+- lane_1
+  - a: <Node & One>
+  - b: Done
+
+## workflow
+- a -> b
 `)));
 
   assert.doesNotMatch(svg, /<script>/);
