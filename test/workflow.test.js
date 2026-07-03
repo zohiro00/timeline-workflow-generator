@@ -12,22 +12,26 @@ ${sample}
 
 test("parses workflow blocks from markdown", () => {
   const workflow = parseWorkflow(markdownSample);
-  assert.equal(workflow.title, "申請ワークフローの時系列図");
+  assert.equal(workflow.title, "購買申請ワークフロー");
   assert.deepEqual(workflow.lanes, [
-    { id: "a", label: "a申請" },
-    { id: "b", label: "b申請" },
-    { id: "c", label: "c申請" },
+    { id: "requester", label: "申請者" },
+    { id: "manager", label: "上長" },
+    { id: "finance", label: "経理" },
+    { id: "purchasing", label: "購買" },
   ]);
-  assert.deepEqual(workflow.nodes.find((node) => node.id === "a1"), {
-    id: "a1",
-    label: "作成",
-    laneId: "a",
+  assert.deepEqual(workflow.nodes.find((node) => node.id === "draft"), {
+    id: "draft",
+    label: "申請作成",
+    laneId: "requester",
     gridX: 0,
     gridY: 0,
   });
-  assert.equal(workflow.nodes.length, 6);
-  assert.equal(workflow.edges.length, 6);
-  assert.equal(workflow.edges[3].type, "dotted");
+  assert.equal(workflow.nodes.length, 8);
+  assert.equal(workflow.edges.length, 8);
+  assert.equal(workflow.edges[1].type, "dotted");
+  assert.equal(workflow.edges[2].type, "cross");
+  assert.equal(workflow.edges[6].type, "dottedCross");
+  assert.equal(workflow.edges[7].type, "invisible");
 });
 
 test("example workflows parse and render", () => {
@@ -64,16 +68,85 @@ test("keeps markdown headings and %% comments distinct", () => {
   assert.deepEqual(workflow.edges, [{ from: "a", to: "b", type: "solid" }]);
 });
 
+test("parses cross and invisible workflow edges", () => {
+  const workflow = parseWorkflow(`# Edge types
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+  - c: C
+  - d: D
+  - e: E
+
+## workflow
+- a -x- b .x. c
+- c ~> d -> e
+`);
+
+  assert.deepEqual(workflow.edges, [
+    { from: "a", to: "b", type: "cross" },
+    { from: "b", to: "c", type: "dottedCross" },
+    { from: "c", to: "d", type: "invisible" },
+    { from: "d", to: "e", type: "solid" },
+  ]);
+});
+
 test("computes gridX by longest dependency path", () => {
   const workflow = layoutWorkflow(parseWorkflow(sample));
   const nodes = new Map(workflow.nodes.map((node) => [node.id, node]));
-  assert.equal(nodes.get("a1").gridX, 0);
-  assert.equal(nodes.get("a2").gridX, 1);
-  assert.equal(nodes.get("b1").gridX, 2);
-  assert.equal(nodes.get("b2").gridX, 3);
-  assert.equal(nodes.get("a3").gridX, 2);
-  assert.equal(nodes.get("a4").gridX, 3);
-  assert.equal(nodes.get("b1").gridY, 1);
+  assert.equal(nodes.get("draft").gridX, 0);
+  assert.equal(nodes.get("review").gridX, 1);
+  assert.equal(nodes.get("revise").gridX, 2);
+  assert.equal(nodes.get("rejected").gridX, 2);
+  assert.equal(nodes.get("budget").gridX, 3);
+  assert.equal(nodes.get("over_budget").gridX, 4);
+  assert.equal(nodes.get("order").gridX, 4);
+  assert.equal(nodes.get("received").gridX, 5);
+  assert.equal(nodes.get("review").gridY, 1);
+});
+
+test("uses invisible edges for layout and cycle detection", () => {
+  const workflow = layoutWorkflow(parseWorkflow(`# Invisible layout
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+  - c: C
+
+## workflow
+- a ~> b -> c
+`));
+  const nodes = new Map(workflow.nodes.map((node) => [node.id, node]));
+
+  assert.equal(nodes.get("a").gridX, 0);
+  assert.equal(nodes.get("b").gridX, 1);
+  assert.equal(nodes.get("c").gridX, 2);
+
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(`# Invisible cycle
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+
+## workflow
+- a ~> b
+- b -> a
+`)),
+    WorkflowError,
+  );
 });
 
 test("rejects cyclic dependencies", () => {
@@ -276,10 +349,36 @@ test("rejects invalid lines with line numbers", () => {
 test("renders svg with labels and connectors", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
   assert.match(svg, /<svg/);
-  assert.match(svg, /申請ワークフロー/);
-  assert.match(svg, /a申請/);
+  assert.match(svg, /購買申請ワークフロー/);
+  assert.match(svg, /申請者/);
   assert.match(svg, /marker-end/);
   assert.match(svg, /edge-dotted/);
+  assert.match(svg, /edge-cross-mark/);
+  assert.match(svg, /class="edge edge-dotted"/);
+});
+
+test("renders cross edge types without arrow markers and hides invisible edges", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Render edge types
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+  - c: C
+  - d: D
+
+## workflow
+- a -x- b .x. c ~> d
+`)));
+
+  assert.match(svg, /edge-cross-mark/);
+  assert.match(svg, /translate\(310, 137\) rotate\(45\)/);
+  assert.match(svg, /<path class="edge edge-dotted" d="M 440 137 L 516 137" \/>/);
+  assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
+  assert.equal([...svg.matchAll(/<path class="edge/g)].length, 2);
 });
 
 test("uses consulting blue outline theme by default", () => {
@@ -310,20 +409,20 @@ test("passes render options through generateWorkflowSvg", () => {
   const defaultSvg = generateWorkflowSvg(sample);
   const widerSvg = generateWorkflowSvg(sample, { gridXSize: 250 });
 
-  assert.match(defaultSvg, /viewBox="0 0 912 478"/);
-  assert.match(widerSvg, /viewBox="0 0 1098 478"/);
+  assert.match(defaultSvg, /viewBox="0 0 1288 594"/);
+  assert.match(widerSvg, /viewBox="0 0 1598 594"/);
 });
 
 test("clips time lines near the last rendered lane", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
 
-  assert.match(svg, /class="time-line"[^>]+y2="412"/);
+  assert.match(svg, /class="time-line"[^>]+y2="528"/);
 });
 
 test("keeps title and time labels vertically separated", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
 
-  assert.match(svg, /<text x="24" y="38"[^>]*>申請ワークフローの時系列図<\/text>/);
+  assert.match(svg, /<text x="24" y="38"[^>]*>購買申請ワークフロー<\/text>/);
   assert.match(svg, /class="time-label" x="196" y="68">T0<\/text>/);
 });
 

@@ -61,7 +61,7 @@ test("engine editor starts with markdown workflow only", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const sourceValue = await page.locator("#source").inputValue();
 
-  assert.ok(sourceValue.startsWith("# 申請ワークフローの時系列図"));
+  assert.ok(sourceValue.startsWith("# 購買申請ワークフロー"));
   assert.doesNotMatch(sourceValue, /```workflow/);
   assert.doesNotMatch(sourceValue, /Markdownの中に workflow ブロック/);
 
