@@ -124,11 +124,11 @@ function renderTopPage() {
         <section class="hero">
           <div class="hero-badge">
             <span class="badge-dot"></span>
-            workflow DSL to PowerPoint-ready SVG
+            Markdown workflow to PowerPoint-ready SVG
           </div>
           <h1 class="hero-title">時系列ワークフロー図を<br><span>PowerPointらしく</span>整える</h1>
           <p class="hero-sub">
-            Markdown内の workflow ブロックから、レーン・時系列・依存関係を読み取り、
+            Markdownの lanes / nodes / workflow セクションから、レーン・時系列・依存関係を読み取り、
             そのまま資料に貼りやすいSVGを生成します。
           </p>
           <a class="hero-cta" href="/engine">
@@ -139,9 +139,9 @@ function renderTopPage() {
           <div class="demo-flow" aria-label="Before and after example">
             <div class="demo-block">
               <div class="block-label">Input</div>
-              <code>node a1: 作成 (lane: a申請)</code>
-              <code>a1 -&gt; a2 -&gt; b1</code>
-              <code>b1 -.-> a4</code>
+              <code>## nodes</code>
+              <code>  - a1: 作成</code>
+              <code>- a1 -&gt; a2 -&gt; b1</code>
             </div>
             <div class="demo-arrow">→</div>
             <div class="demo-block demo-output">
@@ -223,7 +223,7 @@ function renderEnginePage() {
         </aside>
 
         <main class="workspace">
-          <section class="pane source-pane" aria-label="Workflow DSL editor">
+          <section class="pane source-pane" aria-label="Markdown workflow editor">
             <div class="tabs">
               <div class="tab active">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
@@ -239,7 +239,7 @@ function renderEnginePage() {
             </div>
             <div class="editor-body">
               <div id="gutter" class="gutter" aria-hidden="true"></div>
-              <textarea id="source" class="code-input" spellcheck="false" aria-label="workflow DSL"></textarea>
+              <textarea id="source" class="code-input" spellcheck="false" aria-label="Markdown workflow"></textarea>
             </div>
             <section class="workflow-examples" aria-label="Example workflows">
               <button id="examples-toggle" class="workflow-examples-header" type="button" aria-expanded="true" aria-controls="workflow-examples-body">
