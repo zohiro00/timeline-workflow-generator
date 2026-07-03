@@ -1,4 +1,14 @@
-const EDGE_TOKEN_PATTERN = /(-\.->|->)/g;
+const EDGE_DEFINITIONS = [
+  { token: "->", type: "solid", marker: "arrow" },
+  { token: "-.->", type: "dotted", marker: "arrow", dotted: true },
+  { token: "-x-", type: "cross", marker: "cross" },
+  { token: ".x.", type: "dottedCross", marker: "cross", dotted: true },
+  { token: "~>", type: "invisible", visible: false },
+];
+const EDGE_TOKEN_PATTERN = new RegExp(`(${EDGE_DEFINITIONS.map((edge) => escapeRegExp(edge.token)).join("|")})`, "g");
+const EDGE_DEFINITIONS_BY_TOKEN = new Map(EDGE_DEFINITIONS.map((edge) => [edge.token, edge]));
+const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.type, edge]));
+const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
 const defaultThemeId = "consulting-blue-outline";
 const themeColor = {
@@ -264,7 +274,11 @@ export function renderWorkflowSvg(workflow, options = {}) {
   });
 
   const edgeLaneGroupCounts = new Map();
-  const edges = workflow.edges.map((edge, index) => {
+  const edges = [];
+  workflow.edges.forEach((edge) => {
+    const edgeDefinition = EDGE_DEFINITIONS_BY_TYPE.get(edge.type);
+    if (edgeDefinition.visible === false) return;
+
     const from = nodeById.get(edge.from);
     const to = nodeById.get(edge.to);
     const fromPos = nodePosition(from);
@@ -278,11 +292,16 @@ export function renderWorkflowSvg(workflow, options = {}) {
     const laneGroupKey = `${from.gridY}:${to.gridY}`;
     const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
     edgeLaneGroupCounts.set(laneGroupKey, laneGroupIndex + 1);
-    const path = sameLane && forward
-      ? `M ${x1} ${y1} L ${x2} ${y2}`
-      : connectorPath(x1, y1, x2, y2, laneGroupIndex, index);
+    const visibleEdgeIndex = edges.length;
+    const pathData = sameLane && forward
+      ? straightPathData(x1, y1, x2, y2)
+      : connectorPathData(x1, y1, x2, y2, laneGroupIndex, visibleEdgeIndex);
 
-    return `<path class="edge ${edge.type === "dotted" ? "edge-dotted" : ""}" d="${path}" marker-end="url(#arrow)" />`;
+    const classes = ["edge"];
+    if (edgeDefinition.dotted) classes.push("edge-dotted");
+    const markerEnd = edgeDefinition.marker === "arrow" ? ' marker-end="url(#arrow)"' : "";
+    const edgePath = `<path class="${classes.join(" ")}" d="${pathData.path}"${markerEnd} />`;
+    edges.push(edgeDefinition.marker === "cross" ? `${edgePath}\n      ${crossMark(pathData)}` : edgePath);
   });
 
   const nodes = workflow.nodes.map((node) => {
@@ -309,6 +328,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
       .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
       .edge-dotted { stroke-dasharray: 7 7; }
+      .edge-cross-mark line { stroke: ${theme.edge}; stroke-width: 3.4; stroke-linecap: round; }
       .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
       .node text { fill: ${theme.nodeText}; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
     </style>
@@ -329,7 +349,7 @@ export function generateWorkflowSvg(input, options) {
 function parseEdgeChain(line, lineNo) {
   const tokens = line.split(EDGE_TOKEN_PATTERN).map((token) => token.trim()).filter(Boolean);
   if (tokens.length < 3 || tokens.length % 2 === 0) {
-    throw new WorkflowError("依存関係は `a -> b` または `a -.-> b` の形式で記述してください。", lineNo);
+    throw new WorkflowError(`依存関係は \`${EDGE_USAGE}\` の形式で記述してください。`, lineNo);
   }
 
   const edges = [];
@@ -340,7 +360,7 @@ function parseEdgeChain(line, lineNo) {
     if (!isNodeId(from) || !isNodeId(to)) {
       throw new WorkflowError("矢印の両端にはノードIDを指定してください。", lineNo);
     }
-    edges.push({ from, to, type: token === "-.->" ? "dotted" : "solid" });
+    edges.push({ from, to, type: EDGE_DEFINITIONS_BY_TOKEN.get(token).type });
   }
   return edges;
 }
@@ -364,12 +384,44 @@ function validateWorkflow({ lanes, nodes, edges, seenSections }) {
   }
 }
 
-function connectorPath(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
+function straightPathData(x1, y1, x2, y2) {
+  return {
+    path: `M ${x1} ${y1} L ${x2} ${y2}`,
+    endX: x2,
+    endY: y2,
+    previousX: x1,
+    previousY: y1,
+  };
+}
+
+function connectorPathData(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
   const direction = x2 >= x1 ? 1 : -1;
   const spread = 44 + (laneGroupIndex % 6) * 14 + Math.floor(laneGroupIndex / 6) * 8 + (edgeIndex % 2) * 4;
   const c1x = x1 + direction * spread;
   const c2x = x2 - direction * spread;
-  return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
+  return {
+    path: `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`,
+    endX: x2,
+    endY: y2,
+    previousX: c2x,
+    previousY: y2,
+  };
+}
+
+function crossMark({ endX, endY, previousX, previousY }) {
+  const size = 18;
+  const halfSize = size / 2;
+  const deltaX = endX - previousX;
+  const deltaY = endY - previousY;
+  const length = Math.hypot(deltaX, deltaY) || 1;
+  const unitX = deltaX / length;
+  const unitY = deltaY / length;
+  const x = endX - unitX * size;
+  const y = endY - unitY * size;
+  return `<g class="edge-cross-mark" transform="translate(${x}, ${y}) rotate(45)">
+        <line x1="${-halfSize}" y1="0" x2="${halfSize}" y2="0" />
+        <line x1="0" y1="${-halfSize}" x2="0" y2="${halfSize}" />
+      </g>`;
 }
 
 function stripComment(line) {
@@ -379,6 +431,10 @@ function stripComment(line) {
 
 function isNodeId(value) {
   return /^[A-Za-z0-9_-]+$/.test(value);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function escapeXml(value) {

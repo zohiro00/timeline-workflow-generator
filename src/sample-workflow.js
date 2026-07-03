@@ -1,26 +1,32 @@
-export const sampleWorkflowSource = `# 申請ワークフローの時系列図
+export const sampleWorkflowSource = `# 購買申請ワークフロー
 
 ## lanes
-- a: a申請
-- b: b申請
-- c: c申請
+- requester: 申請者
+- manager: 上長
+- finance: 経理
+- purchasing: 購買
 
 ## nodes
-- a
-  - a1: 作成
-  - a2: 承認
-  - a3: 保留
-  - a4: 取消
-- b
-  - b1: 作成
-  - b2: 承認
+- requester
+  - draft: 申請作成
+  - revise: 差戻し対応
+  - received: 納品確認
+- manager
+  - review: 上長承認
+  - rejected: 却下
+- finance
+  - budget: 予算確認
+  - over_budget: 予算NG
+- purchasing
+  - order: 発注処理
 
 ## workflow
-- a1 -> a2
-- a2 -> b1
-- b1 -> b2
-- b1 -.-> a4
-- a2 -> a3 -> a4`;
+- draft -> review
+- review -.-> revise
+- review -x- rejected
+- review -> budget -> order -> received
+- budget .x. over_budget
+- revise ~> budget`;
 
 export const workflowExamples = [
   {
