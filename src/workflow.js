@@ -10,6 +10,7 @@ const EDGE_DEFINITIONS_BY_TOKEN = new Map(EDGE_DEFINITIONS.map((edge) => [edge.t
 const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.type, edge]));
 const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
+const CROSS_MARK_SIZE = 18;
 const defaultThemeId = "consulting-blue-outline";
 const themeColor = {
   consultingBlue: "#1f4e79",
@@ -387,10 +388,8 @@ function validateWorkflow({ lanes, nodes, edges, seenSections }) {
 function straightPathData(x1, y1, x2, y2) {
   return {
     path: `M ${x1} ${y1} L ${x2} ${y2}`,
-    endX: x2,
-    endY: y2,
-    previousX: x1,
-    previousY: y1,
+    crossX: (x1 + x2) / 2,
+    crossY: (y1 + y2) / 2,
   };
 }
 
@@ -401,27 +400,25 @@ function connectorPathData(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
   const c2x = x2 - direction * spread;
   return {
     path: `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`,
-    endX: x2,
-    endY: y2,
-    previousX: c2x,
-    previousY: y2,
+    crossX: cubicBezierPoint(x1, c1x, c2x, x2, 0.5),
+    crossY: cubicBezierPoint(y1, y1, y2, y2, 0.5),
   };
 }
 
-function crossMark({ endX, endY, previousX, previousY }) {
-  const size = 18;
-  const halfSize = size / 2;
-  const deltaX = endX - previousX;
-  const deltaY = endY - previousY;
-  const length = Math.hypot(deltaX, deltaY) || 1;
-  const unitX = deltaX / length;
-  const unitY = deltaY / length;
-  const x = endX - unitX * size;
-  const y = endY - unitY * size;
-  return `<g class="edge-cross-mark" transform="translate(${x}, ${y}) rotate(45)">
+function crossMark({ crossX, crossY }) {
+  const halfSize = CROSS_MARK_SIZE / 2;
+  return `<g class="edge-cross-mark" transform="translate(${crossX}, ${crossY}) rotate(45)">
         <line x1="${-halfSize}" y1="0" x2="${halfSize}" y2="0" />
         <line x1="0" y1="${-halfSize}" x2="0" y2="${halfSize}" />
       </g>`;
+}
+
+function cubicBezierPoint(start, control1, control2, end, t) {
+  const inverseT = 1 - t;
+  return (inverseT ** 3 * start)
+    + (3 * inverseT ** 2 * t * control1)
+    + (3 * inverseT * t ** 2 * control2)
+    + (t ** 3 * end);
 }
 
 function stripComment(line) {

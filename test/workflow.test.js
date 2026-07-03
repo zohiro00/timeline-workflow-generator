@@ -375,10 +375,44 @@ test("renders cross edge types without arrow markers and hides invisible edges",
 `)));
 
   assert.match(svg, /edge-cross-mark/);
-  assert.match(svg, /translate\(310, 137\) rotate\(45\)/);
+  assert.match(svg, /translate\(290, 137\) rotate\(45\)/);
   assert.match(svg, /<path class="edge edge-dotted" d="M 440 137 L 516 137" \/>/);
   assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
   assert.equal([...svg.matchAll(/<path class="edge/g)].length, 2);
+});
+
+test("places cross marks at the center of connector paths", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Cross mark center
+
+## lanes
+- a: P1
+- b: P2
+- c: P3
+
+## nodes
+- a
+  - a1: 申請作成
+  - a2: 申請
+  - a3: 修正
+  - a4: 社内連絡
+- b
+  - b1: 却下
+  - b2: 承認
+- c
+  - c1: 承認
+
+## workflow
+- a1 -> a2
+- a2 -> b1
+- b1 -> a3
+- b1 .x. c1
+- a3 -> b2
+- b2 -> c1
+- c1 -> a4
+`)));
+
+  assert.match(svg, /<path class="edge edge-dotted" d="M 628 253 C 676 253, 1032 369, 1080 369" \/>/);
+  assert.match(svg, /<g class="edge-cross-mark" transform="translate\(854, 311\) rotate\(45\)">/);
 });
 
 test("uses consulting blue outline theme by default", () => {
