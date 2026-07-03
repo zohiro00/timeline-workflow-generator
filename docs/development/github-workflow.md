@@ -27,17 +27,21 @@ Codex 側で確認する場合は、keyring 参照が必要になるため、必
 ## PR 作成手順
 
 1. `git status -sb` で作業ツリーと現在ブランチを確認します。
-2. `main` 上にいる場合は、作業前にブランチを作成します。
-3. 変更対象だけを stage します。
-4. `pnpm run guard:change`、`pnpm test`、必要に応じて `pnpm run build` を実行します。
-5. commit します。
-6. `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>` で push と draft PR 作成を実行します。
+2. `git fetch origin` で `origin/main` を最新化します。ローカル `main` だけを最新の基準として扱ってはいけません。
+3. 作業ブランチが古い場合は、未コミット変更を保護したうえで `origin/main` に追いつかせ、作業差分を載せ直します。
+4. `git diff --name-status origin/main` で、依頼と無関係な削除・巻き戻し・依存更新が混ざっていないことを確認します。
+5. `main` 上にいる場合は、作業前にブランチを作成します。
+6. 変更対象だけを stage します。
+7. `pnpm run guard:change`、`pnpm test`、必要に応じて `pnpm run build` を実行します。
+8. commit します。
+9. `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>` で push と draft PR 作成を実行します。
 
 `pnpm run pr:create` は、現在ブランチ、保護ブランチ、`gh auth status` を確認し、`git push -u origin <branch>` と `gh pr create --draft` を固定手順で実行します。
 
 ## Codex での注意
 
 - `git fetch`、`git pull`、`git push`、`gh pr create` など、remote や認証に触れる操作は権限付きで実行します。
+- PR 作成前の差分説明は、必ず最新化した `origin/main` との比較を根拠にします。古いローカル `main` との比較だけで「差分は安全」と判断しないでください。
 - `pnpm run pr:create` も remote と認証に触れるため、Codex では権限付きで実行します。
 - GitHub コネクタで PR 作成を試して 403 になった場合、深追いせず `gh pr create` に切り替えます。
 - `gh auth status` の sandbox 失敗だけを理由に、ユーザーへ再ログインを求めないでください。権限付き確認で成功する可能性があります。
@@ -48,3 +52,4 @@ Codex 側で確認する場合は、keyring 参照が必要になるため、必
 - `gh auth status` の sandbox 失敗を、認証情報そのものの破損として報告しないでください。
 - PR 作成に GitHub コネクタを標準利用しないでください。
 - `pnpm run pr:create` を迂回して、PR 作成手順を個別コマンドに分解しないでください。
+- `origin/main` を fetch せずに、または古いローカル `main` だけを見て、PR 差分の影響範囲を判断しないでください。
