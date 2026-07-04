@@ -110,6 +110,8 @@ const previewZoomConfig = Object.freeze({
   max: 2.5,
   step: 0.1,
 });
+const previewMaximizeIconSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6" /><path d="M21 3l-7 7" /><path d="M9 21H3v-6" /><path d="M3 21l7-7" /></svg>';
+const previewRestoreIconSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 9h-6V3" /><path d="M15 9l7-7" /><path d="M3 15h6v6" /><path d="M9 15l-7 7" /></svg>';
 
 document.querySelector("#app").innerHTML = location.pathname.startsWith("/engine")
   ? renderEnginePage()
@@ -301,8 +303,8 @@ function renderEnginePage() {
                 <button id="preview-zoom-reset" class="icon-btn" type="button" aria-label="プレビュー倍率をリセット" data-tooltip="Reset zoom">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
                 </button>
-                <button id="preview-maximize-toggle" class="icon-btn" type="button" aria-label="diagramを最大化" aria-pressed="false" data-tooltip="Maximize diagram">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /><path d="M3 3l6 6M21 3l-6 6M21 21l-6-6M3 21l6-6" /></svg>
+                <button id="preview-maximize-toggle" class="icon-btn" type="button" aria-label="diagramを最大化" aria-pressed="false" data-icon-state="maximize" data-tooltip="Maximize diagram">
+                  ${previewMaximizeIconSvg}
                 </button>
               </div>
             </div>
@@ -527,7 +529,9 @@ function mountEngine() {
     workspace.classList.toggle("preview-maximized", isPreviewMaximized);
     previewMaximizeToggle.setAttribute("aria-pressed", String(isPreviewMaximized));
     previewMaximizeToggle.setAttribute("aria-label", isPreviewMaximized ? "diagram最大化を解除" : "diagramを最大化");
+    previewMaximizeToggle.dataset.iconState = isPreviewMaximized ? "restore" : "maximize";
     previewMaximizeToggle.dataset.tooltip = isPreviewMaximized ? "Restore diagram" : "Maximize diagram";
+    previewMaximizeToggle.innerHTML = isPreviewMaximized ? previewRestoreIconSvg : previewMaximizeIconSvg;
     requestAnimationFrame(syncPreviewZoom);
   }
 
