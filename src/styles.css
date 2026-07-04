@@ -772,6 +772,19 @@ svg {
   background: #fff;
 }
 
+.workspace.preview-maximized {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace.preview-maximized .source-pane,
+.workspace.preview-maximized .pane-resizer {
+  display: none;
+}
+
+.workspace.preview-maximized .preview-pane {
+  grid-column: 1 / -1;
+}
+
 .pane {
   display: flex;
   flex-direction: column;
@@ -928,7 +941,9 @@ svg {
 .preview-tools {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   margin-left: auto;
 }
@@ -1174,6 +1189,14 @@ svg {
   .workspace {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(220px, var(--source-pane-size, 44%)) 10px minmax(220px, 1fr);
+  }
+
+  .workspace.preview-maximized {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .workspace.preview-maximized .preview-pane {
+    grid-row: 1 / -1;
   }
 
   .workflow-examples-body {
