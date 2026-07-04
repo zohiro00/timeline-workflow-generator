@@ -301,6 +301,9 @@ function renderEnginePage() {
                 <button id="preview-zoom-reset" class="icon-btn" type="button" aria-label="プレビュー倍率をリセット" data-tooltip="Reset zoom">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
                 </button>
+                <button id="preview-maximize-toggle" class="icon-btn" type="button" aria-label="diagramを最大化" aria-pressed="false" data-tooltip="Maximize diagram">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /><path d="M3 3l6 6M21 3l-6 6M21 21l-6-6M3 21l6-6" /></svg>
+                </button>
               </div>
             </div>
             <div id="preview" class="preview-canvas"></div>
@@ -388,6 +391,7 @@ function mountEngine() {
   const previewZoomIn = document.querySelector("#preview-zoom-in");
   const previewZoomReset = document.querySelector("#preview-zoom-reset");
   const previewZoomValue = document.querySelector("#preview-zoom-value");
+  const previewMaximizeToggle = document.querySelector("#preview-maximize-toggle");
   const download = document.querySelector("#download-svg");
   const restoreSample = document.querySelector("#format-sample");
   const resetSettings = document.querySelector("#reset-settings");
@@ -399,6 +403,7 @@ function mountEngine() {
   const examplesToggle = document.querySelector("#examples-toggle");
   const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
   const previewZoom = { scale: 1, mode: "fit" };
+  let isPreviewMaximized = false;
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
@@ -418,10 +423,16 @@ function mountEngine() {
   previewZoomOut.addEventListener("click", () => setPreviewZoom(previewZoom.scale - previewZoomConfig.step, "manual"));
   previewZoomIn.addEventListener("click", () => setPreviewZoom(previewZoom.scale + previewZoomConfig.step, "manual"));
   previewZoomReset.addEventListener("click", resetPreviewZoom);
+  previewMaximizeToggle.addEventListener("click", () => setPreviewMaximized(!isPreviewMaximized));
   settingsToggle.addEventListener("click", toggleSettingsSidebar);
   paneResizer.addEventListener("pointerdown", startPaneResize);
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
   examplesToggle.addEventListener("click", toggleWorkflowExamples);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isPreviewMaximized) {
+      setPreviewMaximized(false);
+    }
+  });
   updatePaneResizerOrientation();
   window.addEventListener("resize", updatePaneResizerOrientation);
   new ResizeObserver(() => {
@@ -509,6 +520,15 @@ function mountEngine() {
     const panel = examplesToggle.closest(".workflow-examples");
     const collapsed = panel.classList.toggle("collapsed");
     examplesToggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  function setPreviewMaximized(nextMaximized) {
+    isPreviewMaximized = nextMaximized;
+    workspace.classList.toggle("preview-maximized", isPreviewMaximized);
+    previewMaximizeToggle.setAttribute("aria-pressed", String(isPreviewMaximized));
+    previewMaximizeToggle.setAttribute("aria-label", isPreviewMaximized ? "diagram最大化を解除" : "diagramを最大化");
+    previewMaximizeToggle.dataset.tooltip = isPreviewMaximized ? "Restore diagram" : "Maximize diagram";
+    requestAnimationFrame(syncPreviewZoom);
   }
 
   function updatePaneResizerOrientation() {

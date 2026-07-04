@@ -218,6 +218,51 @@ test("engine preview fits the rendered svg and supports zoom reset", async () =>
   await page.close();
 });
 
+test("engine preview can be maximized across the workspace and restored", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const workspace = page.locator(".workspace");
+  const sourcePane = page.locator(".source-pane");
+  const previewPane = page.locator(".preview-pane");
+  const resizer = page.locator(".pane-resizer");
+  const maximize = page.locator("#preview-maximize-toggle");
+
+  const initialSourceBox = await sourcePane.boundingBox();
+  assert.ok(initialSourceBox.width > 200);
+  assert.equal(await maximize.getAttribute("aria-pressed"), "false");
+  assert.equal(await maximize.getAttribute("aria-label"), "diagramを最大化");
+
+  await maximize.click();
+  await page.waitForFunction(() => document.querySelector(".workspace")?.classList.contains("preview-maximized"));
+  assert.equal(await maximize.getAttribute("aria-pressed"), "true");
+  assert.equal(await maximize.getAttribute("aria-label"), "diagram最大化を解除");
+  await expectLocatorHidden(sourcePane);
+  await expectLocatorHidden(resizer);
+
+  const maximizedWorkspaceBox = await workspace.boundingBox();
+  const maximizedPreviewBox = await previewPane.boundingBox();
+  assert.ok(maximizedPreviewBox.width >= maximizedWorkspaceBox.width - 2);
+  assert.ok(maximizedPreviewBox.height >= maximizedWorkspaceBox.height - 2);
+  assert.equal(await page.locator("#preview svg").count(), 1);
+
+  const maximizedMetrics = await readPreviewMetrics(page);
+  assert.ok(maximizedMetrics.viewportWidth <= maximizedMetrics.availableWidth + 2);
+  assert.ok(maximizedMetrics.viewportHeight <= maximizedMetrics.availableHeight + 2);
+
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector(".workspace")?.classList.contains("preview-maximized"));
+  assert.equal(await maximize.getAttribute("aria-pressed"), "false");
+  assert.ok((await sourcePane.boundingBox()).width > 200);
+  assert.ok((await resizer.boundingBox()).width > 0);
+
+  await maximize.click();
+  await page.waitForFunction(() => document.querySelector(".workspace")?.classList.contains("preview-maximized"));
+  await maximize.click();
+  await page.waitForFunction(() => !document.querySelector(".workspace")?.classList.contains("preview-maximized"));
+  assert.equal(await maximize.getAttribute("aria-pressed"), "false");
+
+  await page.close();
+});
+
 test("engine panes can be resized horizontally on desktop", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const sourcePane = page.locator(".source-pane");
