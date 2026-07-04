@@ -1,13 +1,14 @@
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const host = "127.0.0.1";
 const port = Number(process.env.UI_CAPTURE_PORT ?? 5173);
 const baseUrl = `http://${host}:${port}`;
-const outputDir = new URL("../artifacts/ui-captures/", import.meta.url);
+export const captureOutputDir = new URL("../docs/assets/", import.meta.url);
 
-const scenarios = [
+export const captureScenarios = [
   {
     name: "engine-desktop",
     path: "/engine",
@@ -21,18 +22,18 @@ const scenarios = [
 
 let devServer;
 
-try {
-  await mkdir(outputDir, { recursive: true });
+export async function runCaptureEngine() {
+  await mkdir(captureOutputDir, { recursive: true });
   await ensureDevServer();
 
   const browser = await chromium.launch();
   try {
-    for (const scenario of scenarios) {
+    for (const scenario of captureScenarios) {
       const page = await browser.newPage({ viewport: scenario.viewport });
-      await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: "networkidle" });
+      await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: "domcontentloaded" });
       await scenario.waitFor(page);
       await page.screenshot({
-        path: new URL(`${scenario.name}.png`, outputDir).pathname,
+        path: new URL(`${scenario.name}.png`, captureOutputDir).pathname,
       });
       await page.close();
       console.log(`Captured ${scenario.name}.png`);
@@ -40,9 +41,15 @@ try {
   } finally {
     await browser.close();
   }
-} finally {
-  if (devServer) {
-    devServer.kill("SIGTERM");
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await runCaptureEngine();
+  } finally {
+    if (devServer) {
+      devServer.kill("SIGTERM");
+    }
   }
 }
 

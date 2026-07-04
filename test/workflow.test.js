@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { sampleWorkflowSource, workflowExamples } from "../src/sample-workflow.js";
-import { generateWorkflowSvg, layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "../src/workflow.js";
+import {
+  generateWorkflowSvg,
+  layoutWorkflow,
+  parseWorkflow,
+  renderWorkflowSvg,
+  WorkflowError,
+  workflowSvgDefaults,
+} from "../src/workflow.js";
 
 const sample = sampleWorkflowSource;
 const markdownSample = `# Markdownの中に workflow ブロックを書けます
@@ -422,6 +429,23 @@ test("uses consulting blue outline theme by default", () => {
   assert.match(svg, /\.edge \{ fill: none; stroke: #1f4e79; stroke-width: 2\.4; \}/);
   assert.match(svg, /\.node rect \{ fill: #ffffff; stroke: #1f4e79; stroke-width: 2; \}/);
   assert.doesNotMatch(svg, /#d24726/);
+});
+
+test("exports renderer defaults for UI settings", () => {
+  assert.deepEqual(
+    {
+      gridXSize: workflowSvgDefaults.gridXSize,
+      gridYSize: workflowSvgDefaults.gridYSize,
+      nodeWidth: workflowSvgDefaults.nodeWidth,
+      nodeHeight: workflowSvgDefaults.nodeHeight,
+    },
+    {
+      gridXSize: 188,
+      gridYSize: 116,
+      nodeWidth: 112,
+      nodeHeight: 42,
+    },
+  );
 });
 
 test("renders filled blue and gray outline themes", () => {

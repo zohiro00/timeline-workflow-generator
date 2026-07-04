@@ -4,13 +4,15 @@
 対象ブランチ: `codex/audit-engine-readme-tests`
 基準: 最新 `origin/main`
 
+実装状況: 2026-07-04 の follow-up 実装で、README 最新化、top 文言追従、キャプチャ出力先の一本化、SVG 既定値共有、UI テスト待機条件の一部改善を実施済み。
+
 ## 結論
 
-- P1: README のスクリーンショットが現行 engine と一致していない。`docs/assets/engine-desktop.png` は旧 UI のままで、`pnpm run capture:engine` が生成する `artifacts/ui-captures/engine-desktop.png` と SHA も表示内容も異なる。
-- P1: README の Feature と Workflow Example が最新 DSL に追従していない。現行 DSL は `-x-`、`.x.`、`~>` を扱うが、README は実線/点線までの説明と旧サンプルに留まっている。
-- P2: top ページの説明は大きく破綻していないが、engine の現行サンプルが表現する cross/invisible edge を訴求していない。新機能の認知経路としては弱い。
+- 解消済み: README のスクリーンショットが現行 engine と一致していない。監査時点では `docs/assets/engine-desktop.png` は旧 UI のままで、`pnpm run capture:engine` が生成する `artifacts/ui-captures/engine-desktop.png` と SHA も表示内容も異なっていた。
+- 解消済み: README の Feature と Workflow Example が最新 DSL に追従していない。現行 DSL は `-x-`、`.x.`、`~>` を扱うが、README は実線/点線までの説明と旧サンプルに留まっていた。
+- 解消済み: top ページの説明は大きく破綻していないが、engine の現行サンプルが表現する cross/invisible edge を訴求していなかった。
 - P2: `src/main.js` に UI 構築、設定 schema、状態、イベント登録、プレビュー制御、リサイズ制御が集中している。直ちに壊れてはいないが、設定追加時の変更理由が増えやすい。
-- P2: SVG レンダリング既定値が `src/main.js` と `src/workflow.js` に重複している。今後の寸法変更時に UI 既定値と API 既定値がずれるリスクがある。
+- 解消済み: SVG レンダリング既定値が `src/main.js` と `src/workflow.js` に重複していた。follow-up 実装で `workflowSvgDefaults` を共有する形にした。
 - P3: UI テストは今回の連続実行では安定していた。ただし `networkidle`、固定ポート、mouse drag、`boundingBox()` 判定は将来のフレイキー要因なので、次の UI 改修時に改善する。
 
 ## 監査結果
@@ -25,7 +27,7 @@
 ### README とスクリーンショット
 
 - README は `docs/assets/engine-desktop.png` を参照している。
-- `pnpm run capture:engine` は `artifacts/ui-captures/engine-desktop.png` を生成する。
+- 監査時点の `pnpm run capture:engine` は `artifacts/ui-captures/engine-desktop.png` を生成していた。follow-up 実装後は `docs/assets/engine-desktop.png` を直接更新する。
 - SHA:
   - `docs/assets/engine-desktop.png`: `bcfc6898a5a5e4b597849c57bb204ca7c285e505858eab7b290494a6ea08c7fa`
   - `artifacts/ui-captures/engine-desktop.png`: `5e2fa1b26d925d575f054a04ad69d6532c0f097da224fc2f375a46be02b7b671`
@@ -51,26 +53,26 @@
 
 ## 次の改修計画
 
-1. README 最新化
+1. README 最新化: 実施済み
    - `README.md` の Features と Workflow Example を `docs/dsl.md` と `src/sample-workflow.js` の現行仕様へ合わせる。
    - cross edge、dotted cross edge、invisible edge を短く説明する。
    - `docs/assets/engine-desktop.png` を最新 engine キャプチャへ更新する。
 
-2. キャプチャ導線の一本化
+2. キャプチャ導線の一本化: 実施済み
    - `scripts/capture-engine.js` の出力先を README 参照先の `docs/assets/engine-desktop.png` に変更する。
    - 変更後、`pnpm run capture:engine` 実行で tracked 画像が更新されることをテストまたは手順で確認する。
    - `docs/development/tooling.md` の記述も同じ出力先へ更新する。
 
-3. top ページ文言の追従
+3. top ページ文言の追従: 実施済み
    - top の Feature から「設定拡張前提」を外し、現行機能として配色プリセット、エッジ種別、ズーム/サイズ調整を説明する。
    - demo は単純な `->` のままでもよいが、最低限 `.x.` や `~>` が DSL にあることを Feature に反映する。
 
-4. 設計負債の小分け解消
+4. 設計負債の小分け解消: 一部実施済み
    - `renderWorkflowSvg()` の default config を export し、engine の `settingsSchema` はそこを参照する。
    - responsive breakpoint と pane size を名前付き定数に寄せる。ただし CSS/JS の共有方法は小さく保ち、ビルド設定や依存は増やさない。
    - `mountEngine()` から preview zoom と pane resize を局所 helper に切り出す。DOM 依存は `src/main.js` 内に留める。
 
-5. UI テスト安定化
+5. UI テスト安定化: 一部実施済み
    - `networkidle` を、`#preview svg` と `#status.status.ok` の明示 wait 中心へ寄せる。
    - drag テストは pointer 操作後に orientation と CSS custom property または pane size の settled 状態を待つ。
    - capture script と UI test の dev server 起動 helper を重複させない方向で整理する。

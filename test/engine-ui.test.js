@@ -213,7 +213,7 @@ test("engine panes can be resized vertically on narrow screens", async () => {
 
 async function openEnginePage(viewport) {
   const page = await browser.newPage({ viewport });
-  await page.goto(`${baseUrl}/engine`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/engine`, { waitUntil: "domcontentloaded" });
   await page.locator("#preview svg").waitFor({ state: "visible" });
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
   return page;

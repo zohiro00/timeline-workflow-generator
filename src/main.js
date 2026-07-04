@@ -1,6 +1,18 @@
-import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError } from "./workflow.js";
+import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
 import { sampleWorkflowSource, workflowExamples } from "./sample-workflow.js";
 import "./styles.css";
+
+const stackedWorkspaceQuery = "(max-width: 980px)";
+const paneResizeConfig = Object.freeze({
+  desktop: {
+    minSourceSize: 280,
+    minPreviewSize: 360,
+  },
+  stacked: {
+    minSourceSize: 220,
+    minPreviewSize: 220,
+  },
+});
 
 const settingsSchema = [
   {
@@ -43,7 +55,7 @@ const settingsSchema = [
         min: 144,
         max: 240,
         step: 4,
-        value: 188,
+        value: workflowSvgDefaults.gridXSize,
         unit: "px",
       },
       {
@@ -54,7 +66,7 @@ const settingsSchema = [
         min: 88,
         max: 152,
         step: 4,
-        value: 116,
+        value: workflowSvgDefaults.gridYSize,
         unit: "px",
       },
     ],
@@ -72,7 +84,7 @@ const settingsSchema = [
         min: 96,
         max: 164,
         step: 4,
-        value: 112,
+        value: workflowSvgDefaults.nodeWidth,
         unit: "px",
       },
       {
@@ -83,7 +95,7 @@ const settingsSchema = [
         min: 36,
         max: 60,
         step: 2,
-        value: 42,
+        value: workflowSvgDefaults.nodeHeight,
         unit: "px",
       },
     ],
@@ -158,8 +170,8 @@ function renderTopPage() {
           <div class="features-grid">
             ${featureCard("Markdown対応", "文章の中に workflow ブロックを書くだけで図を生成できます。")}
             ${featureCard("時系列同期", "依存関係を読み取り、ノードの時間位置を自動で揃えます。")}
-            ${featureCard("設定拡張前提", "engine の左メニューから今後、色や矢印スタイルを追加できます。")}
-            ${featureCard("SVGダウンロード", "PowerPointに貼り付けやすいSVGとして保存できます。")}
+            ${featureCard("矢印種別", "実線・点線・中止マーク・見えない依存で分岐を表現できます。")}
+            ${featureCard("調整とSVG保存", "配色、サイズ、ズームを整え、PowerPoint向けSVGとして保存できます。")}
           </div>
         </section>
       </main>
@@ -449,7 +461,7 @@ function mountEngine() {
   }
 
   function updatePaneResizerOrientation() {
-    const isStacked = window.matchMedia("(max-width: 980px)").matches;
+    const isStacked = window.matchMedia(stackedWorkspaceQuery).matches;
     paneResizer.setAttribute("aria-orientation", isStacked ? "horizontal" : "vertical");
   }
 
@@ -496,13 +508,13 @@ function mountEngine() {
   }
 
   function getPaneResizeMetrics() {
-    const isStacked = window.matchMedia("(max-width: 980px)").matches;
+    const isStacked = window.matchMedia(stackedWorkspaceQuery).matches;
+    const sizeConfig = isStacked ? paneResizeConfig.stacked : paneResizeConfig.desktop;
     const bounds = workspace.getBoundingClientRect();
     return {
       isStacked,
       bounds,
-      minSourceSize: isStacked ? 220 : 280,
-      minPreviewSize: isStacked ? 220 : 360,
+      ...sizeConfig,
       resizerSize: isStacked ? paneResizer.offsetHeight : paneResizer.offsetWidth,
     };
   }

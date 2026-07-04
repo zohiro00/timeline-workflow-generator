@@ -16,7 +16,8 @@
 
 - `pnpm run capture:engine` は、スマホなど開発サーバーを直接確認しにくい環境向けの補助コマンドです。
 - 初回または Playwright 更新後に Chromium がない場合は、`pnpm exec playwright install chromium` を実行してください。
-- 現時点では `/engine` の desktop 正常表示だけを `artifacts/ui-captures/engine-desktop.png` に保存します。
+- 現時点では `/engine` の desktop 正常表示だけを `docs/assets/engine-desktop.png` に保存します。
+- この画像は README から参照される tracked asset です。UI を変えた場合は、キャプチャ結果も同じ差分に含めてください。
 - 通常の品質ゲートではありません。UI変更の確認が必要なときだけ実行してください。
 
 ## 依存管理
