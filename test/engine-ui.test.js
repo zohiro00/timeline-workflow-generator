@@ -20,6 +20,32 @@ test.after(async () => {
   devServer?.kill("SIGTERM");
 });
 
+test("top page output example communicates the generated SVG result", async () => {
+  const page = await openTopPage({ width: 1280, height: 820 });
+
+  assert.match(await page.locator(".hero-badge").textContent(), /Markdown workflow to timeline SVG/);
+  assert.match(await page.locator(".hero-title").textContent(), /Markdownから、時系列ワークフロー図を自動生成/);
+  assert.equal(await page.locator(".demo-output .block-label").textContent(), "Output SVG");
+  await expectLocatorVisible(page.locator(".mini-timeline"));
+  await expectLocatorVisible(page.getByText("依存関係から時系列位置を自動整列"));
+  assert.deepEqual(await page.locator(".mini-lane-label").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "申請",
+    "受付",
+  ]);
+  assert.equal(await page.locator(".mini-arrow").count(), 2);
+
+  await page.close();
+});
+
+test("top page output example fits on narrow screens", async () => {
+  const page = await openTopPage({ width: 360, height: 740 });
+  const overflow = await page.locator(".demo-output").evaluate((item) => item.scrollWidth - item.clientWidth);
+
+  assert.ok(overflow <= 1);
+
+  await page.close();
+});
+
 test("engine settings sidebar can be collapsed and reopened", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
 
@@ -216,6 +242,13 @@ async function openEnginePage(viewport) {
   await page.goto(`${baseUrl}/engine`, { waitUntil: "domcontentloaded" });
   await page.locator("#preview svg").waitFor({ state: "visible" });
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
+  return page;
+}
+
+async function openTopPage(viewport) {
+  const page = await browser.newPage({ viewport });
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.locator(".demo-output").waitFor({ state: "visible" });
   return page;
 }
 

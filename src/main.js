@@ -136,9 +136,9 @@ function renderTopPage() {
         <section class="hero">
           <div class="hero-badge">
             <span class="badge-dot"></span>
-            Markdown workflow to PowerPoint-ready SVG
+            Markdown workflow to timeline SVG
           </div>
-          <h1 class="hero-title">時系列ワークフロー図を<br><span>PowerPointらしく</span>整える</h1>
+          <h1 class="hero-title">Markdownから、<br><span>時系列ワークフロー図</span>を自動生成</h1>
           <p class="hero-sub">
             Markdownの lanes / nodes / workflow セクションから、レーン・時系列・依存関係を読み取り、
             そのまま資料に貼りやすいSVGを生成します。
@@ -157,10 +157,24 @@ function renderTopPage() {
             </div>
             <div class="demo-arrow">→</div>
             <div class="demo-block demo-output">
-              <div class="block-label">Output</div>
-              <div class="mini-lane"><span>作成</span><span>承認</span><span>差戻</span></div>
-              <div class="mini-line"></div>
-              <div class="mini-lane"><span>受付</span><span>完了</span></div>
+              <div class="block-label">Output SVG</div>
+              <div class="mini-timeline" aria-label="レーン型タイムラインSVGの生成例">
+                <div class="mini-time" aria-hidden="true"><span>Step 1</span><span>Step 2</span><span>Step 3</span></div>
+                <div class="mini-lane">
+                  <span class="mini-lane-label">申請</span>
+                  <span class="mini-node">作成</span>
+                  <span class="mini-arrow"></span>
+                  <span class="mini-node">承認</span>
+                  <span class="mini-node mini-node-muted">差戻</span>
+                </div>
+                <div class="mini-lane">
+                  <span class="mini-lane-label">受付</span>
+                  <span class="mini-node mini-node-ghost">待機</span>
+                  <span class="mini-arrow mini-arrow-bridge"></span>
+                  <span class="mini-node mini-node-final">完了</span>
+                </div>
+              </div>
+              <p class="output-caption">依存関係から時系列位置を自動整列</p>
             </div>
           </div>
         </section>
@@ -171,7 +185,7 @@ function renderTopPage() {
             ${featureCard("Markdown対応", "文章の中に workflow ブロックを書くだけで図を生成できます。")}
             ${featureCard("時系列同期", "依存関係を読み取り、ノードの時間位置を自動で揃えます。")}
             ${featureCard("矢印種別", "実線・点線・中止マーク・見えない依存で分岐を表現できます。")}
-            ${featureCard("調整とSVG保存", "配色、サイズ、ズームを整え、PowerPoint向けSVGとして保存できます。")}
+            ${featureCard("調整とSVG保存", "配色、サイズ、ズームを整え、資料に貼りやすいSVGとして保存できます。")}
           </div>
         </section>
       </main>
