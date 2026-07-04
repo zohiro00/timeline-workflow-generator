@@ -230,11 +230,15 @@ test("engine preview can be maximized across the workspace and restored", async 
   assert.ok(initialSourceBox.width > 200);
   assert.equal(await maximize.getAttribute("aria-pressed"), "false");
   assert.equal(await maximize.getAttribute("aria-label"), "diagramを最大化");
+  assert.equal(await maximize.getAttribute("data-icon-state"), "maximize");
+  const initialIconPath = await maximize.locator("path").first().getAttribute("d");
 
   await maximize.click();
   await page.waitForFunction(() => document.querySelector(".workspace")?.classList.contains("preview-maximized"));
   assert.equal(await maximize.getAttribute("aria-pressed"), "true");
   assert.equal(await maximize.getAttribute("aria-label"), "diagram最大化を解除");
+  assert.equal(await maximize.getAttribute("data-icon-state"), "restore");
+  assert.notEqual(await maximize.locator("path").first().getAttribute("d"), initialIconPath);
   await expectLocatorHidden(sourcePane);
   await expectLocatorHidden(resizer);
 
@@ -251,6 +255,8 @@ test("engine preview can be maximized across the workspace and restored", async 
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.querySelector(".workspace")?.classList.contains("preview-maximized"));
   assert.equal(await maximize.getAttribute("aria-pressed"), "false");
+  assert.equal(await maximize.getAttribute("data-icon-state"), "maximize");
+  assert.equal(await maximize.locator("path").first().getAttribute("d"), initialIconPath);
   assert.ok((await sourcePane.boundingBox()).width > 200);
   assert.ok((await resizer.boundingBox()).width > 0);
 
