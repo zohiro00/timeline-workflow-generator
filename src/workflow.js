@@ -12,6 +12,16 @@ const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`ã€
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
 const CROSS_MARK_SIZE = 18;
 const defaultThemeId = "consulting-blue-outline";
+export const workflowSvgDefaults = Object.freeze({
+  paddingLeft: 140,
+  paddingTop: 116,
+  paddingRight: 96,
+  paddingBottom: 88,
+  gridXSize: 188,
+  gridYSize: 116,
+  nodeWidth: 112,
+  nodeHeight: 42,
+});
 const themeColor = {
   consultingBlue: "#1f4e79",
   consultingText: "#1f2937",
@@ -230,14 +240,7 @@ export function layoutWorkflow(workflow) {
 
 export function renderWorkflowSvg(workflow, options = {}) {
   const config = {
-    paddingLeft: 140,
-    paddingTop: 116,
-    paddingRight: 96,
-    paddingBottom: 88,
-    gridXSize: 188,
-    gridYSize: 116,
-    nodeWidth: 112,
-    nodeHeight: 42,
+    ...workflowSvgDefaults,
     ...options,
   };
   const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
