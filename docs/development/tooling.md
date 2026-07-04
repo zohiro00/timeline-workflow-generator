@@ -12,6 +12,8 @@
 - Draft PR 作成: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
 - Git hook 有効化: `pnpm run install:hooks`
 
+Codex から `pnpm test` を実行する場合は、Playwright UI テストが Vite dev server を起動するため権限付きで実行してください。通常 sandbox では `listen EPERM` で失敗することがあります。
+
 ## UI画像キャプチャ
 
 - `pnpm run capture:engine` は、スマホなど開発サーバーを直接確認しにくい環境向けの補助コマンドです。

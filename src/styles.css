@@ -252,16 +252,60 @@ svg {
   min-height: 150px;
 }
 
-.mini-lane {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 42px;
+.mini-timeline {
+  --mini-timeline-columns: 42px minmax(42px, 1fr) 24px minmax(42px, 1fr) minmax(42px, 1fr);
+
+  display: grid;
+  grid-template-columns: var(--mini-timeline-columns);
+  gap: 10px 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, transparent 45px, rgba(210, 71, 38, 0.09) 45px, rgba(210, 71, 38, 0.09) 46px, transparent 46px),
+    var(--bg-subtle);
 }
 
-.mini-lane span {
-  min-width: 58px;
-  padding: 8px 10px;
+.mini-time,
+.mini-lane {
+  display: grid;
+  grid-template-columns: var(--mini-timeline-columns);
+  grid-column: 1 / -1;
+  align-items: center;
+  min-height: 32px;
+}
+
+.mini-time span {
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.mini-time span:first-child {
+  grid-column: 2;
+}
+
+.mini-time span:nth-child(2) {
+  grid-column: 4;
+}
+
+.mini-time span:nth-child(3) {
+  grid-column: 5;
+}
+
+.mini-lane-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mini-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 6px;
   border: 2px solid var(--ppt-orange);
   border-radius: 6px;
   background: #fff;
@@ -270,10 +314,51 @@ svg {
   font-weight: 800;
 }
 
-.mini-line {
-  height: 1px;
-  margin: 2px 0;
-  background: var(--border);
+.mini-node-muted {
+  border-style: dashed;
+  color: var(--ppt-red);
+  background: #fff7f2;
+}
+
+.mini-node-ghost {
+  border-color: var(--border-strong);
+  color: var(--dim);
+  background: transparent;
+}
+
+.mini-node-final {
+  grid-column: 5;
+}
+
+.mini-arrow {
+  position: relative;
+  height: 2px;
+  background: var(--ppt-orange);
+}
+
+.mini-arrow::after {
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--ppt-orange);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.mini-arrow-bridge {
+  background: repeating-linear-gradient(90deg, var(--ppt-orange) 0 7px, transparent 7px 11px);
+}
+
+.output-caption {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .features {
