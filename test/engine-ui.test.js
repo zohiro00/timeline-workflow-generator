@@ -94,6 +94,30 @@ test("engine editor starts with markdown workflow only", async () => {
   await page.close();
 });
 
+test("engine editor supports markdown assist shortcuts", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const editor = page.locator("#source");
+
+  await editor.fill("- first");
+  await editor.evaluate((item) => item.setSelectionRange(item.value.length, item.value.length));
+  await editor.press("Enter");
+  assert.equal(await editor.inputValue(), "- first\n- ");
+
+  await page.keyboard.type("second");
+  assert.equal(await editor.inputValue(), "- first\n- second");
+
+  await editor.press("Alt+ArrowUp");
+  assert.equal(await editor.inputValue(), "- second\n- first");
+
+  await editor.press("Tab");
+  assert.equal(await editor.inputValue(), "  - second\n- first");
+
+  await editor.press("Shift+Tab");
+  assert.equal(await editor.inputValue(), "- second\n- first");
+
+  await page.close();
+});
+
 test("engine workflow examples can be expanded and applied", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const examples = page.locator(".workflow-example");

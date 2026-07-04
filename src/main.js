@@ -1,3 +1,4 @@
+import { continueMarkdownList, indentMarkdownLines, moveSelectedLines } from "./editor-assist.js";
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
 import { sampleWorkflowSource, workflowExamples } from "./sample-workflow.js";
 import "./styles.css";
@@ -406,6 +407,7 @@ function mountEngine() {
     updateGutter();
     if (settings.autoRender) scheduleRender();
   });
+  source.addEventListener("keydown", handleEditorKeydown);
   restoreSample.addEventListener("click", () => {
     source.value = sampleWorkflowSource;
     updateGutter();
@@ -461,6 +463,41 @@ function mountEngine() {
 
   updateGutter();
   render();
+
+  function handleEditorKeydown(event) {
+    const edit = getEditorAssistEdit(event);
+    if (!edit) return;
+
+    event.preventDefault();
+    applyEditorAssistEdit(edit);
+  }
+
+  function getEditorAssistEdit(event) {
+    if (event.key === "Enter" && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      return continueMarkdownList(source.value, source.selectionStart, source.selectionEnd);
+    }
+
+    if (event.key === "Tab" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      return indentMarkdownLines(source.value, source.selectionStart, source.selectionEnd, event.shiftKey ? "out" : "in");
+    }
+
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key === "ArrowUp") {
+      return moveSelectedLines(source.value, source.selectionStart, source.selectionEnd, "up");
+    }
+
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key === "ArrowDown") {
+      return moveSelectedLines(source.value, source.selectionStart, source.selectionEnd, "down");
+    }
+
+    return null;
+  }
+
+  function applyEditorAssistEdit(edit) {
+    source.value = edit.value;
+    source.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+    updateGutter();
+    if (settings.autoRender) scheduleRender();
+  }
 
   function toggleSettingsSidebar() {
     const collapsed = engineBody.classList.toggle("sidebar-collapsed");
