@@ -198,9 +198,11 @@ export function parseWorkflow(input) {
 
 export function layoutWorkflow(workflow) {
   const laneIndex = new Map(workflow.lanes.map((lane, index) => [lane.id, index]));
-  const nodes = new Map(workflow.nodes.map((node) => [node.id, { ...node }]));
-  const incoming = new Map(workflow.nodes.map((node) => [node.id, []]));
-  const outgoing = new Map(workflow.nodes.map((node) => [node.id, []]));
+  const activeNodeIds = new Set(workflow.edges.flatMap((edge) => [edge.from, edge.to]));
+  const activeNodes = workflow.nodes.filter((node) => activeNodeIds.has(node.id));
+  const nodes = new Map(activeNodes.map((node) => [node.id, { ...node }]));
+  const incoming = new Map(activeNodes.map((node) => [node.id, []]));
+  const outgoing = new Map(activeNodes.map((node) => [node.id, []]));
 
   workflow.edges.forEach((edge) => {
     incoming.get(edge.to).push(edge.from);
@@ -208,7 +210,7 @@ export function layoutWorkflow(workflow) {
   });
 
   const indegree = new Map(Array.from(incoming, ([id, from]) => [id, from.length]));
-  const queue = workflow.nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
+  const queue = activeNodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
   const ordered = [];
 
   while (queue.length > 0) {
@@ -221,7 +223,7 @@ export function layoutWorkflow(workflow) {
     }
   }
 
-  if (ordered.length !== workflow.nodes.length) {
+  if (ordered.length !== activeNodes.length) {
     throw new WorkflowError("依存関係に循環があります。DAGになるように矢印を見直してください。");
   }
 

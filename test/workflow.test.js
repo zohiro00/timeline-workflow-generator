@@ -116,6 +116,35 @@ test("computes gridX by longest dependency path", () => {
   assert.equal(nodes.get("review").gridY, 1);
 });
 
+test("renders only nodes referenced by workflow edges", () => {
+  const source = `# ワークフロー名
+
+## lanes
+- lane1: レーン1
+- lane2: レーン2
+
+## nodes
+- lane1
+  - node1: ノード1
+  - node11: x
+- lane2
+  - node2: ノード2
+
+## workflow
+- node1 -> node2
+`;
+  const parsed = parseWorkflow(source);
+  const workflow = layoutWorkflow(parsed);
+  const svg = renderWorkflowSvg(workflow);
+
+  assert.equal(parsed.nodes.length, 3);
+  assert.deepEqual(workflow.nodes.map((node) => node.id), ["node1", "node2"]);
+  assert.equal([...svg.matchAll(/<g class="node"/g)].length, 2);
+  assert.match(svg, />ノード1<\/text>/);
+  assert.match(svg, />ノード2<\/text>/);
+  assert.doesNotMatch(svg, />x<\/text>/);
+});
+
 test("uses invisible edges for layout and cycle detection", () => {
   const workflow = layoutWorkflow(parseWorkflow(`# Invisible layout
 
