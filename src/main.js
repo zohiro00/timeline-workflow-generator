@@ -1,12 +1,12 @@
 import { continueMarkdownList, indentMarkdownLines, moveSelectedLines } from "./editor-assist.js";
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
-import { sampleWorkflowSource, workflowExamples } from "./sample-workflow.js";
+import { sampleWorkflowSource, starterWorkflowCallout, starterWorkflowSource, workflowExamples } from "./sample-workflow.js";
 import "./styles.css";
 
 const stackedWorkspaceQuery = "(max-width: 980px)";
 const paneResizeConfig = Object.freeze({
   desktop: {
-    minSourceSize: 280,
+    minSourceSize: 260,
     minPreviewSize: 360,
   },
   stacked: {
@@ -262,9 +262,17 @@ function renderEnginePage() {
             </div>
             <div class="pane-toolbar">
               <div class="breadcrumb">workspace <span>/</span> source.workflow</div>
-              <button id="format-sample" class="icon-btn" type="button" aria-label="サンプルを復元">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
-              </button>
+              <div class="source-toolbar-actions">
+                <button id="format-sample" class="icon-btn" type="button" aria-label="${escapeHtml(starterWorkflowCallout.actionLabel)}" data-tooltip="${escapeHtml(starterWorkflowCallout.actionTooltip)}">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+                </button>
+                <div id="starter-callout" class="starter-callout" role="note">
+                  <span>${escapeHtml(starterWorkflowCallout.message)}</span>
+                  <button id="starter-callout-dismiss" class="starter-callout-dismiss" type="button" aria-label="${escapeHtml(starterWorkflowCallout.dismissLabel)}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="editor-body">
               <div id="gutter" class="gutter" aria-hidden="true"></div>
@@ -395,7 +403,9 @@ function mountEngine() {
   const previewZoomValue = document.querySelector("#preview-zoom-value");
   const previewMaximizeToggle = document.querySelector("#preview-maximize-toggle");
   const download = document.querySelector("#download-svg");
-  const restoreSample = document.querySelector("#format-sample");
+  const starterTemplateButton = document.querySelector("#format-sample");
+  const starterCallout = document.querySelector("#starter-callout");
+  const starterCalloutDismiss = document.querySelector("#starter-callout-dismiss");
   const resetSettings = document.querySelector("#reset-settings");
   const engineBody = document.querySelector(".engine-body");
   const settingsToggle = document.querySelector("#settings-toggle");
@@ -406,19 +416,27 @@ function mountEngine() {
   const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
   const previewZoom = { scale: 1, mode: "fit" };
   let isPreviewMaximized = false;
+  let isStarterCalloutDismissed = false;
   let currentSvg = "";
   const scheduleRender = debounce(render, 240);
 
   source.value = sampleWorkflowSource;
   source.addEventListener("input", () => {
     updateGutter();
+    syncStarterCallout();
     if (settings.autoRender) scheduleRender();
   });
   source.addEventListener("keydown", handleEditorKeydown);
-  restoreSample.addEventListener("click", () => {
-    source.value = sampleWorkflowSource;
+  starterTemplateButton.addEventListener("click", () => {
+    isStarterCalloutDismissed = true;
+    source.value = starterWorkflowSource;
     updateGutter();
+    syncStarterCallout();
     render();
+  });
+  starterCalloutDismiss.addEventListener("click", () => {
+    isStarterCalloutDismissed = true;
+    syncStarterCallout();
   });
   resetSettings.addEventListener("click", restoreDefaultSettings);
   download.addEventListener("click", downloadSvg);
@@ -468,14 +486,21 @@ function mountEngine() {
     button.addEventListener("click", () => {
       const example = workflowExamplesById.get(button.dataset.workflowExample);
       if (!example) return;
+      isStarterCalloutDismissed = true;
       source.value = example.source;
       updateGutter();
+      syncStarterCallout();
       render();
     });
   });
 
   updateGutter();
+  syncStarterCallout();
   render();
+
+  function syncStarterCallout() {
+    starterCallout.hidden = isStarterCalloutDismissed || source.value !== sampleWorkflowSource;
+  }
 
   function handleEditorKeydown(event) {
     const edit = getEditorAssistEdit(event);

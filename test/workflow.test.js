@@ -42,7 +42,7 @@ test("parses workflow blocks from markdown", () => {
 });
 
 test("example workflows parse and render", () => {
-  assert.equal(workflowExamples.length, 3);
+  assert.equal(workflowExamples.length, 4);
 
   for (const example of workflowExamples) {
     const workflow = layoutWorkflow(parseWorkflow(example.source));

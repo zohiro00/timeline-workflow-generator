@@ -94,6 +94,46 @@ test("engine editor starts with markdown workflow only", async () => {
   await page.close();
 });
 
+test("engine starter callout appears for the untouched sample and hides after editing", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const callout = page.locator("#starter-callout");
+
+  await expectLocatorVisible(callout);
+  assert.match(await callout.textContent(), /雛形から始める/);
+
+  await page.locator("#source").fill("# 自分のワークフロー");
+  await expectLocatorHidden(callout);
+
+  await page.close();
+});
+
+test("engine reset button starts from the starter workflow template", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const reset = page.getByRole("button", { name: "雛形から始める" });
+
+  assert.equal(await reset.getAttribute("data-tooltip"), "雛形から始める");
+  await reset.click();
+  assert.equal(await page.locator("#source").inputValue(), `# ワークフロー名
+
+## lanes
+- lane1: レーン1
+- lane2: レーン2
+
+## nodes
+- lane1
+  - node1: ノード1
+- lane2
+  - node2: ノード2
+
+## workflow
+- node1 -> node2`);
+  await page.locator("#preview svg title").waitFor({ state: "attached" });
+  assert.equal(await page.locator("#preview svg title").textContent(), "ワークフロー名");
+  await expectLocatorHidden(page.locator("#starter-callout"));
+
+  await page.close();
+});
+
 test("engine editor supports markdown assist shortcuts", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const editor = page.locator("#source");
@@ -123,7 +163,13 @@ test("engine workflow examples can be expanded and applied", async () => {
   const examples = page.locator(".workflow-example");
   const toggle = page.locator("#examples-toggle");
 
-  assert.equal(await examples.count(), 3);
+  assert.equal(await examples.count(), 4);
+  await page.getByRole("button", { name: /購買申請/ }).click();
+  assert.match(await page.locator("#source").inputValue(), /^# 購買申請ワークフロー/);
+  await page.locator("#preview svg title").waitFor({ state: "attached" });
+  assert.equal(await page.locator("#preview svg title").textContent(), "購買申請ワークフロー");
+  await expectLocatorHidden(page.locator("#starter-callout"));
+
   await page.getByRole("button", { name: /採用選考/ }).click();
   assert.match(await page.locator("#source").inputValue(), /^# 採用選考ワークフロー/);
   await page.locator("#preview svg title").waitFor({ state: "attached" });

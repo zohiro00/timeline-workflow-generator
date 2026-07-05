@@ -28,7 +28,35 @@ export const sampleWorkflowSource = `# 購買申請ワークフロー
 - budget .x. over_budget
 - revise ~> budget`;
 
+export const starterWorkflowSource = `# ワークフロー名
+
+## lanes
+- lane1: レーン1
+- lane2: レーン2
+
+## nodes
+- lane1
+  - node1: ノード1
+- lane2
+  - node2: ノード2
+
+## workflow
+- node1 -> node2`;
+
+export const starterWorkflowCallout = Object.freeze({
+  actionLabel: "雛形から始める",
+  actionTooltip: "雛形から始める",
+  message: "雛形から始める",
+  dismissLabel: "案内を閉じる",
+});
+
 export const workflowExamples = [
+  {
+    id: "purchase",
+    title: "購買申請",
+    description: "申請作成から承認、予算確認、発注まで",
+    source: sampleWorkflowSource,
+  },
   {
     id: "approval",
     title: "稟議・承認",
