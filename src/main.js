@@ -110,6 +110,7 @@ const previewZoomConfig = Object.freeze({
   max: 2.5,
   step: 0.1,
 });
+const stalePreviewMessage = "入力にエラーがあります。前回成功時のプレビューを表示しています。";
 const previewMaximizeIconSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6" /><path d="M21 3l-7 7" /><path d="M9 21H3v-6" /><path d="M3 21l7-7" /></svg>';
 const previewRestoreIconSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 9h-6V3" /><path d="M15 9l7-7" /><path d="M3 15h6v6" /><path d="M9 15l-7 7" /></svg>';
 
@@ -638,14 +639,23 @@ function mountEngine() {
       statusSummary.textContent = "Preview updated";
       download.disabled = false;
     } catch (error) {
-      currentSvg = "";
-      preview.innerHTML = `<div class="empty-state">構文を確認してください</div>`;
+      if (preview.querySelector("svg")) {
+        showStalePreviewNotice();
+      } else {
+        currentSvg = "";
+        preview.innerHTML = `<div class="empty-state">構文を確認してください</div>`;
+      }
       updatePreviewZoomControls();
       status.className = "status error";
       status.textContent = error instanceof WorkflowError ? error.message : String(error);
-      statusSummary.textContent = "Error";
+      statusSummary.textContent = "Preview not updated";
       download.disabled = true;
     }
+  }
+
+  function showStalePreviewNotice() {
+    if (preview.querySelector(".stale-preview-notice")) return;
+    preview.insertAdjacentHTML("afterbegin", `<div class="stale-preview-notice" role="note">${stalePreviewMessage}</div>`);
   }
 
   function pickWorkflowOptions() {

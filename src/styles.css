@@ -1179,6 +1179,7 @@ svg {
 }
 
 .preview-canvas {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -1207,6 +1208,28 @@ svg {
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.stale-preview-notice {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: fit-content;
+  max-width: min(520px, calc(100% - 8px));
+  margin: 0 0 12px auto;
+  padding: 7px 10px;
+  border: 1px solid #efb39f;
+  border-radius: 6px;
+  color: #8f2d1d;
+  background: #fff5ef;
+  box-shadow: 0 8px 18px rgba(74, 50, 37, 0.12);
+  font-size: 12px;
+  font-weight: 800;
+  line-break: strict;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
 }
 
 .status {
