@@ -9,7 +9,7 @@
 - テスト: `pnpm test`
 - ビルド: `pnpm run build`
 - 変更ゲート: `pnpm run guard:change`
-- Draft PR 作成: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
+- Draft PR 作成の CLI fallback: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
 - Git hook 有効化: `pnpm run install:hooks`
 
 Codex から `pnpm test` を実行する場合は、Playwright UI テストが Vite dev server を起動するため権限付きで実行してください。通常 sandbox では `listen EPERM` で失敗することがあります。
