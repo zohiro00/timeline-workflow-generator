@@ -491,7 +491,7 @@ svg {
 
 .engine-body {
   display: grid;
-  grid-template-columns: 44px var(--sidebar-width, 292px) minmax(0, 1fr);
+  grid-template-columns: 44px var(--sidebar-width, 252px) minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -576,7 +576,7 @@ svg {
 }
 
 .settings-sidebar {
-  width: var(--sidebar-width, 292px);
+  width: var(--sidebar-width, 252px);
   min-height: 0;
   overflow-y: auto;
   border-right: 1px solid var(--border);
@@ -765,7 +765,7 @@ svg {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(280px, var(--source-pane-size, 42%)) 10px minmax(360px, 1fr);
+  grid-template-columns: minmax(260px, var(--source-pane-size, 34%)) 10px minmax(360px, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -883,6 +883,7 @@ svg {
 }
 
 .pane-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -911,7 +912,15 @@ svg {
   color: var(--border-strong);
 }
 
+.source-toolbar-actions {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
 .icon-btn {
+  position: relative;
   display: grid;
   place-items: center;
   width: 26px;
@@ -936,6 +945,95 @@ svg {
 .icon-btn:disabled:hover {
   color: var(--muted);
   background: transparent;
+}
+
+.icon-btn[data-tooltip]:hover::after,
+.icon-btn[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text);
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(60, 52, 45, 0.12);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.starter-callout {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 96px);
+  padding: 9px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(60, 52, 45, 0.16);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.starter-callout::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 9px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--border-strong);
+  border-left: 1px solid var(--border-strong);
+  background: #fff;
+  transform: rotate(45deg);
+}
+
+.starter-callout[hidden] {
+  display: none;
+}
+
+.starter-callout-dismiss {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -3px -4px 0 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.starter-callout-dismiss:hover,
+.starter-callout-dismiss:focus-visible {
+  color: var(--text);
+  background: #ece8e2;
+  outline: none;
+}
+
+.starter-callout-dismiss svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
 }
 
 .preview-tools {
