@@ -70,6 +70,13 @@ const settingsSchema = [
         value: workflowSvgDefaults.gridYSize,
         unit: "px",
       },
+      {
+        id: "showTimeLabels",
+        label: "時間ラベル",
+        description: "Step 1, Step 2 などのラベルを表示",
+        type: "toggle",
+        value: workflowSvgDefaults.showTimeLabels,
+      },
     ],
   },
   {
@@ -665,6 +672,7 @@ function mountEngine() {
       nodeWidth: settings.nodeWidth,
       nodeHeight: settings.nodeHeight,
       theme: settings.themeHint,
+      showTimeLabels: settings.showTimeLabels,
     };
   }
 

@@ -83,6 +83,23 @@ test("engine settings start with style first and layout groups collapsed", async
   await page.close();
 });
 
+test("engine can hide timeline step labels from canvas settings", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const timeLabelControl = page.locator('[data-setting="showTimeLabels"]');
+
+  await page.locator('[data-group="canvas"] .settings-group-header').click();
+  assert.equal(await timeLabelControl.isChecked(), true);
+  assert.equal(await page.locator("#preview svg .time-label").first().textContent(), "Step 1");
+  assert.equal(await page.locator("#preview svg").evaluate((svg) => svg.textContent.includes("T0")), false);
+
+  await timeLabelControl.uncheck();
+  await page.locator("#status.status.ok").waitFor({ state: "visible" });
+  assert.equal(await page.locator("#preview svg .time-label").count(), 0);
+  assert.ok(await page.locator("#preview svg .time-line").count() > 0);
+
+  await page.close();
+});
+
 test("engine editor starts with markdown workflow only", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const sourceValue = await page.locator("#source").inputValue();
@@ -252,6 +269,7 @@ test("engine settings can be restored to defaults", async () => {
   const gridControl = page.locator('[data-setting="gridXSize"]');
   const nodeControl = page.locator('[data-setting="nodeWidth"]');
   const themeControl = page.locator('[data-setting="themeHint"]');
+  const timeLabelControl = page.locator('[data-setting="showTimeLabels"]');
   const reset = page.locator("#reset-settings");
 
   await page.locator('[data-group="canvas"] .settings-group-header').click();
@@ -259,6 +277,7 @@ test("engine settings can be restored to defaults", async () => {
   await gridControl.fill("224");
   await nodeControl.fill("156");
   await themeControl.selectOption("consulting-gray-outline");
+  await timeLabelControl.uncheck();
   assert.equal(await page.locator("#gridXSize-value").textContent(), "224px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "156px");
 
@@ -266,6 +285,7 @@ test("engine settings can be restored to defaults", async () => {
   assert.equal(await gridControl.inputValue(), "188");
   assert.equal(await nodeControl.inputValue(), "112");
   assert.equal(await themeControl.inputValue(), "consulting-blue-outline");
+  assert.equal(await timeLabelControl.isChecked(), true);
   assert.equal(await page.locator("#gridXSize-value").textContent(), "188px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "112px");
   assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 枠線");
@@ -283,15 +303,18 @@ test("engine theme preset updates the rendered svg", async () => {
   assert.match(await page.locator("#preview svg style").textContent(), /stroke: #1f4e79/);
 
   await themeControl.selectOption("consulting-blue-fill");
+  await waitForThemeLabel(page, "濃い青 / 塗りつぶし");
   assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 塗りつぶし");
   assert.match(await page.locator("#preview svg style").textContent(), /\.node rect \{ fill: #1f4e79; stroke: #1f4e79;/);
   assert.match(await page.locator("#preview svg style").textContent(), /\.node text \{ fill: #ffffff;/);
 
   await themeControl.selectOption("consulting-gray-outline");
+  await waitForThemeLabel(page, "灰色 / 枠線");
   assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 枠線");
   assert.match(await page.locator("#preview svg style").textContent(), /stroke: #595959/);
 
   await themeControl.selectOption("consulting-gray-fill");
+  await waitForThemeLabel(page, "灰色 / 塗りつぶし");
   assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 塗りつぶし");
   assert.match(await page.locator("#preview svg style").textContent(), /\.node rect \{ fill: #595959; stroke: #595959;/);
   assert.match(await page.locator("#preview svg style").textContent(), /\.node text \{ fill: #ffffff;/);
@@ -451,6 +474,13 @@ async function expectLocatorVisible(locator) {
   const box = await locator.boundingBox();
   assert.ok(box?.width > 0);
   assert.ok(box?.height > 0);
+}
+
+async function waitForThemeLabel(page, label) {
+  await page.waitForFunction(
+    (expectedLabel) => document.querySelector("#theme-label")?.textContent === expectedLabel,
+    label,
+  );
 }
 
 async function readPreviewMetrics(page) {
