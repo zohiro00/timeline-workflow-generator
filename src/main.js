@@ -244,9 +244,6 @@ function renderEnginePage() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v5H6zM6 18h12M9 11v7M15 11v7" /></svg>
           </button>
           <div class="activity-spacer"></div>
-          <button id="download-svg" class="activity-btn" type="button" data-tooltip="Download SVG" aria-label="Download SVG">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" /></svg>
-          </button>
         </nav>
 
         <aside id="settings-sidebar" class="settings-sidebar" aria-label="Settings">
@@ -322,6 +319,17 @@ function renderEnginePage() {
                 <button id="preview-maximize-toggle" class="icon-btn" type="button" aria-label="diagramを最大化" aria-pressed="false" data-icon-state="maximize" data-tooltip="Maximize diagram">
                   ${previewMaximizeIconSvg}
                 </button>
+                <div id="export-menu" class="export-menu">
+                  <button id="export-menu-toggle" class="export-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-menu-list" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" /></svg>
+                    <span>Export</span>
+                  </button>
+                  <div id="export-menu-list" class="export-menu-list" role="menu" hidden>
+                    <button id="copy-image" class="export-menu-item" type="button" role="menuitem">画像をコピー</button>
+                    <button id="download-png" class="export-menu-item" type="button" role="menuitem">PNGでダウンロード</button>
+                    <button id="download-svg" class="export-menu-item" type="button" role="menuitem">SVGでダウンロード</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div id="preview" class="preview-canvas"></div>
@@ -410,6 +418,11 @@ function mountEngine() {
   const previewZoomReset = document.querySelector("#preview-zoom-reset");
   const previewZoomValue = document.querySelector("#preview-zoom-value");
   const previewMaximizeToggle = document.querySelector("#preview-maximize-toggle");
+  const exportMenu = document.querySelector("#export-menu");
+  const exportMenuToggle = document.querySelector("#export-menu-toggle");
+  const exportMenuList = document.querySelector("#export-menu-list");
+  const copyImage = document.querySelector("#copy-image");
+  const downloadPng = document.querySelector("#download-png");
   const download = document.querySelector("#download-svg");
   const starterTemplateButton = document.querySelector("#format-sample");
   const starterCallout = document.querySelector("#starter-callout");
@@ -447,6 +460,9 @@ function mountEngine() {
     syncStarterCallout();
   });
   resetSettings.addEventListener("click", restoreDefaultSettings);
+  exportMenuToggle.addEventListener("click", toggleExportMenu);
+  copyImage.addEventListener("click", copyPngImage);
+  downloadPng.addEventListener("click", downloadPngImage);
   download.addEventListener("click", downloadSvg);
   previewZoomOut.addEventListener("click", () => setPreviewZoom(previewZoom.scale - previewZoomConfig.step, "manual"));
   previewZoomIn.addEventListener("click", () => setPreviewZoom(previewZoom.scale + previewZoomConfig.step, "manual"));
@@ -457,9 +473,18 @@ function mountEngine() {
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
   examplesToggle.addEventListener("click", toggleWorkflowExamples);
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isExportMenuOpen()) {
+      closeExportMenu();
+      exportMenuToggle.focus();
+      return;
+    }
     if (event.key === "Escape" && isPreviewMaximized) {
       setPreviewMaximized(false);
     }
+  });
+  document.addEventListener("click", (event) => {
+    if (!isExportMenuOpen() || exportMenu.contains(event.target)) return;
+    closeExportMenu();
   });
   updatePaneResizerOrientation();
   window.addEventListener("resize", updatePaneResizerOrientation);
@@ -644,7 +669,7 @@ function mountEngine() {
       status.className = "status ok";
       status.textContent = `${workflow.nodes.length} nodes / ${workflow.edges.length} edges / ${workflow.lanes.length} lanes`;
       statusSummary.textContent = "Preview updated";
-      download.disabled = false;
+      setExportEnabled(true);
     } catch (error) {
       if (preview.querySelector("svg")) {
         showStalePreviewNotice();
@@ -656,7 +681,7 @@ function mountEngine() {
       status.className = "status error";
       status.textContent = error instanceof WorkflowError ? error.message : String(error);
       statusSummary.textContent = "Preview not updated";
-      download.disabled = true;
+      setExportEnabled(false);
     }
   }
 
@@ -776,15 +801,119 @@ function mountEngine() {
     gutter.innerHTML = Array.from({ length: lines }, (_, index) => `<div>${index + 1}</div>`).join("");
   }
 
+  function setExportEnabled(enabled) {
+    exportMenuToggle.disabled = !enabled;
+    if (!enabled) closeExportMenu();
+  }
+
+  function isExportMenuOpen() {
+    return exportMenuToggle.getAttribute("aria-expanded") === "true";
+  }
+
+  function toggleExportMenu() {
+    if (exportMenuToggle.disabled) return;
+    if (isExportMenuOpen()) {
+      closeExportMenu();
+      return;
+    }
+    exportMenuToggle.setAttribute("aria-expanded", "true");
+    exportMenuList.hidden = false;
+  }
+
+  function closeExportMenu() {
+    exportMenuToggle.setAttribute("aria-expanded", "false");
+    exportMenuList.hidden = true;
+  }
+
   function downloadSvg() {
     if (!currentSvg) return;
     const blob = new Blob([currentSvg], { type: "image/svg+xml" });
+    downloadBlob(blob, "workflow.svg");
+    closeExportMenu();
+  }
+
+  async function downloadPngImage() {
+    if (!currentSvg) return;
+    try {
+      const blob = await createPngBlobFromSvg(currentSvg);
+      downloadBlob(blob, "workflow.png");
+      statusSummary.textContent = "PNG downloaded";
+    } catch (error) {
+      showExportError(error);
+    } finally {
+      closeExportMenu();
+    }
+  }
+
+  async function copyPngImage() {
+    if (!currentSvg) return;
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      showExportError(new Error("このブラウザでは画像コピーに対応していません。"));
+      closeExportMenu();
+      return;
+    }
+    try {
+      const blob = await createPngBlobFromSvg(currentSvg);
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob }),
+      ]);
+      statusSummary.textContent = "Image copied";
+    } catch (error) {
+      showExportError(error);
+    } finally {
+      closeExportMenu();
+    }
+  }
+
+  function showExportError(error) {
+    status.className = "status error";
+    status.textContent = error instanceof Error ? error.message : String(error);
+    statusSummary.textContent = "Export failed";
+  }
+
+  function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "workflow.svg";
+    anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  function createPngBlobFromSvg(svgText) {
+    const dimensions = getPreviewSvgDimensions();
+    if (!dimensions) return Promise.reject(new Error("PNGに変換できるプレビューがありません。"));
+
+    return new Promise((resolve, reject) => {
+      const svgBlob = new Blob([svgText], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
+      const image = new Image();
+
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        canvas.width = dimensions.width;
+        canvas.height = dimensions.height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("PNG変換用のcanvasを初期化できません。"));
+          return;
+        }
+        context.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+          reject(new Error("PNG画像を生成できません。"));
+        }, "image/png");
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("SVGをPNGに変換できません。"));
+      };
+      image.src = url;
+    });
   }
 }
 
