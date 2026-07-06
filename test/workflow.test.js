@@ -467,12 +467,14 @@ test("exports renderer defaults for UI settings", () => {
       gridYSize: workflowSvgDefaults.gridYSize,
       nodeWidth: workflowSvgDefaults.nodeWidth,
       nodeHeight: workflowSvgDefaults.nodeHeight,
+      showTimeLabels: workflowSvgDefaults.showTimeLabels,
     },
     {
       gridXSize: 188,
       gridYSize: 116,
       nodeWidth: 112,
       nodeHeight: 42,
+      showTimeLabels: true,
     },
   );
 });
@@ -510,7 +512,15 @@ test("keeps title and time labels vertically separated", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
 
   assert.match(svg, /<text x="24" y="38"[^>]*>購買申請ワークフロー<\/text>/);
-  assert.match(svg, /class="time-label" x="196" y="68">T0<\/text>/);
+  assert.match(svg, /class="time-label" x="196" y="68">Step 1<\/text>/);
+});
+
+test("can hide time labels while keeping time lines", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)), { showTimeLabels: false });
+
+  assert.doesNotMatch(svg, /class="time-label"/);
+  assert.doesNotMatch(svg, />Step 1<\/text>/);
+  assert.match(svg, /class="time-line"/);
 });
 
 test("separates multi-lane connector curves by lane pair", () => {

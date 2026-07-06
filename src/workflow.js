@@ -21,6 +21,7 @@ export const workflowSvgDefaults = Object.freeze({
   gridYSize: 116,
   nodeWidth: 112,
   nodeHeight: 42,
+  showTimeLabels: true,
 });
 const themeColor = {
   consultingBlue: "#1f4e79",
@@ -274,9 +275,12 @@ export function renderWorkflowSvg(workflow, options = {}) {
 
   const gridLines = Array.from({ length: maxGridX + 1 }, (_, gridX) => {
     const x = config.paddingLeft + gridX * config.gridXSize + config.nodeWidth / 2;
+    const timeLabel = config.showTimeLabels
+      ? `
+      <text class="time-label" x="${x}" y="${config.paddingTop - 48}">Step ${gridX + 1}</text>`
+      : "";
     return `
-      <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${timeLineEndY}" />
-      <text class="time-label" x="${x}" y="${config.paddingTop - 48}">T${gridX}</text>`;
+      <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${timeLineEndY}" />${timeLabel}`;
   });
 
   const edgeLaneGroupCounts = new Map();
