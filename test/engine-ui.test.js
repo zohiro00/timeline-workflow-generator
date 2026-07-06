@@ -156,7 +156,7 @@ test("engine keeps the last successful preview visible while showing input error
   const editor = page.locator("#source");
   const reset = page.getByRole("button", { name: "雛形から始める" });
   const staleNotice = page.locator(".stale-preview-notice");
-  const download = page.locator("#download-svg");
+  const exportToggle = page.locator("#export-menu-toggle");
   const validSource = `# ワークフロー名
 
 ## lanes
@@ -192,7 +192,7 @@ test("engine keeps the last successful preview visible while showing input error
   await reset.click();
   await page.locator("#preview svg title").waitFor({ state: "attached" });
   assert.equal(await page.locator("#preview svg title").textContent(), "ワークフロー名");
-  assert.equal(await download.isDisabled(), false);
+  assert.equal(await exportToggle.isDisabled(), false);
 
   await editor.fill(invalidSource);
   await page.locator("#status.status.error").waitFor({ state: "visible" });
@@ -201,13 +201,127 @@ test("engine keeps the last successful preview visible while showing input error
   assert.equal(await page.locator("#preview svg").count(), 1);
   assert.equal(await page.locator("#preview svg title").textContent(), "ワークフロー名");
   assert.equal(await staleNotice.textContent(), "入力にエラーがあります。前回成功時のプレビューを表示しています。");
-  assert.equal(await download.isDisabled(), true);
+  assert.equal(await exportToggle.isDisabled(), true);
 
   await editor.fill(validSource);
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
   await staleNotice.waitFor({ state: "detached" });
   assert.equal(await page.locator("#status-summary").textContent(), "Preview updated");
-  assert.equal(await download.isDisabled(), false);
+  assert.equal(await exportToggle.isDisabled(), false);
+
+  await page.close();
+});
+
+test("engine export menu lives in the preview toolbar and closes accessibly", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const exportToggle = page.locator("#export-menu-toggle");
+  const exportMenu = page.locator("#export-menu-list");
+
+  assert.equal(await page.locator(".activity #download-svg").count(), 0);
+  assert.equal(await exportToggle.isDisabled(), false);
+  assert.equal((await exportToggle.textContent()).trim(), "Export");
+
+  await exportToggle.click();
+  assert.equal(await exportToggle.getAttribute("aria-expanded"), "true");
+  assert.deepEqual(await exportMenu.locator(".export-menu-item").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "画像をコピー",
+    "PNGでダウンロード",
+    "SVGでダウンロード",
+  ]);
+
+  await page.keyboard.press("Escape");
+  assert.equal(await exportToggle.getAttribute("aria-expanded"), "false");
+  await expectLocatorHidden(exportMenu);
+
+  await exportToggle.click();
+  await page.locator("#status").click();
+  assert.equal(await exportToggle.getAttribute("aria-expanded"), "false");
+
+  await page.close();
+});
+
+test("engine export menu downloads svg and png files", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const exportToggle = page.locator("#export-menu-toggle");
+
+  await exportToggle.click();
+  const [svgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: "SVGでダウンロード" }).click(),
+  ]);
+  assert.equal(svgDownload.suggestedFilename(), "workflow.svg");
+  assert.equal(await page.locator("#export-menu-list").isHidden(), true);
+
+  await exportToggle.click();
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: "PNGでダウンロード" }).click(),
+  ]);
+  assert.equal(pngDownload.suggestedFilename(), "workflow.png");
+  assert.equal(await pngDownload.failure(), null);
+  assert.equal(await page.locator("#status-summary").textContent(), "PNG downloaded");
+
+  await page.close();
+});
+
+test("engine export menu copies the rendered png image", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  await page.evaluate(() => {
+    Object.defineProperty(window, "ClipboardItem", {
+      configurable: true,
+      value: class ClipboardItemMock {
+        constructor(items) {
+          this.items = items;
+        }
+      },
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        write: async (items) => {
+          const blob = Object.values(items[0].items)[0];
+          window.__clipboardWrite = {
+            itemCount: items.length,
+            size: blob.size,
+            type: blob.type,
+          };
+        },
+      },
+    });
+  });
+
+  await page.locator("#export-menu-toggle").click();
+  await page.getByRole("menuitem", { name: "画像をコピー" }).click();
+
+  const clipboardWrite = await page.waitForFunction(() => window.__clipboardWrite).then((handle) => handle.jsonValue());
+  assert.deepEqual({
+    itemCount: clipboardWrite.itemCount,
+    type: clipboardWrite.type,
+  }, {
+    itemCount: 1,
+    type: "image/png",
+  });
+  assert.ok(clipboardWrite.size > 0);
+  assert.equal(await page.locator("#status-summary").textContent(), "Image copied");
+
+  await page.close();
+});
+
+test("engine export menu reports unsupported image copy", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {},
+    });
+  });
+
+  await page.locator("#export-menu-toggle").click();
+  await page.getByRole("menuitem", { name: "画像をコピー" }).click();
+
+  assert.equal(await page.locator("#status-summary").textContent(), "Export failed");
+  assert.match(await page.locator("#status").textContent(), /画像コピーに対応していません/);
+  assert.equal(await page.locator("#export-menu-list").isHidden(), true);
 
   await page.close();
 });
