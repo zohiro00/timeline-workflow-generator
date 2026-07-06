@@ -22,7 +22,7 @@
 - [開発コマンドと依存管理](docs/development/tooling.md)
 - [GitHub 操作方針](docs/development/github-workflow.md)
 - [UI と SVG の方針](docs/development/ui-svg.md)
-- [失敗・アンチパターンのアーカイブ](docs/development/archives/)
+- [失敗・反省・再発防止のアーカイブ](docs/development/archives/)
 
 ## 最低限の確認
 
