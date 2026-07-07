@@ -384,6 +384,7 @@ test("engine settings can be restored to defaults", async () => {
   const nodeControl = page.locator('[data-setting="nodeWidth"]');
   const themeControl = page.locator('[data-setting="themeHint"]');
   const timeLabelControl = page.locator('[data-setting="showTimeLabels"]');
+  const labelFitControl = page.locator('[data-setting="labelFitStrategy"]');
   const reset = page.locator("#reset-settings");
 
   await page.locator('[data-group="canvas"] .settings-group-header').click();
@@ -392,6 +393,7 @@ test("engine settings can be restored to defaults", async () => {
   await nodeControl.fill("156");
   await themeControl.selectOption("consulting-gray-outline");
   await timeLabelControl.uncheck();
+  await labelFitControl.selectOption("shrink-first");
   assert.equal(await page.locator("#gridXSize-value").textContent(), "224px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "156px");
 
@@ -400,10 +402,45 @@ test("engine settings can be restored to defaults", async () => {
   assert.equal(await nodeControl.inputValue(), "112");
   assert.equal(await themeControl.inputValue(), "consulting-blue-outline");
   assert.equal(await timeLabelControl.isChecked(), true);
+  assert.equal(await labelFitControl.inputValue(), "wrap-first");
   assert.equal(await page.locator("#gridXSize-value").textContent(), "188px");
   assert.equal(await page.locator("#nodeWidth-value").textContent(), "112px");
   assert.equal(await page.locator("#theme-label").textContent(), "濃い青 / 枠線");
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
+
+  await page.close();
+});
+
+test("engine label fit strategy updates the rendered svg", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const labelFitControl = page.locator('[data-setting="labelFitStrategy"]');
+  const source = `# Label fit
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: ABCDEFGHIJKL
+  - b: Done
+
+## workflow
+- a -> b`;
+
+  await page.locator('[data-group="nodes"] .settings-group-header').click();
+  assert.equal(await labelFitControl.inputValue(), "wrap-first");
+  assert.deepEqual(await labelFitControl.locator("option").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "自動改行を優先",
+    "文字縮小を優先",
+  ]);
+
+  await page.locator("#source").fill(source);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "Label fit");
+  assert.equal(await page.locator("#preview .node text").first().getAttribute("font-size"), "14");
+
+  await labelFitControl.selectOption("shrink-first");
+  await page.waitForFunction(() => document.querySelector("#preview .node text")?.getAttribute("font-size") === "12");
+  assert.equal(await page.locator("#preview .node text").first().textContent(), "ABCDEFGHIJKL");
 
   await page.close();
 });

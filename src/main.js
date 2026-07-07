@@ -106,6 +106,17 @@ const settingsSchema = [
         value: workflowSvgDefaults.nodeHeight,
         unit: "px",
       },
+      {
+        id: "labelFitStrategy",
+        label: "ラベル表示",
+        description: "長いラベルの収め方",
+        type: "select",
+        value: workflowSvgDefaults.labelFitStrategy,
+        options: [
+          { value: "wrap-first", label: "自動改行を優先" },
+          { value: "shrink-first", label: "文字縮小を優先" },
+        ],
+      },
     ],
   },
 ];
@@ -698,6 +709,7 @@ function mountEngine() {
       nodeHeight: settings.nodeHeight,
       theme: settings.themeHint,
       showTimeLabels: settings.showTimeLabels,
+      labelFitStrategy: settings.labelFitStrategy,
     };
   }
 

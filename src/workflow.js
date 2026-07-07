@@ -10,6 +10,7 @@ const EDGE_DEFINITIONS_BY_TOKEN = new Map(EDGE_DEFINITIONS.map((edge) => [edge.t
 const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.type, edge]));
 const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
+const LABEL_FIT_STRATEGIES = new Set(["wrap-first", "shrink-first"]);
 const CROSS_MARK_SIZE = 18;
 const defaultThemeId = "consulting-blue-outline";
 export const workflowSvgDefaults = Object.freeze({
@@ -22,6 +23,7 @@ export const workflowSvgDefaults = Object.freeze({
   nodeWidth: 112,
   nodeHeight: 42,
   showTimeLabels: true,
+  labelFitStrategy: "wrap-first",
 });
 const themeColor = {
   consultingBlue: "#1f4e79",
@@ -246,6 +248,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     ...workflowSvgDefaults,
     ...options,
   };
+  const labelFitStrategy = normalizeLabelFitStrategy(config.labelFitStrategy);
   const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
   const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
   const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
@@ -268,8 +271,16 @@ export function renderWorkflowSvg(workflow, options = {}) {
 
   const laneRows = workflow.lanes.map((lane, index) => {
     const y = config.paddingTop + index * config.gridYSize + config.nodeHeight / 2;
+    const label = formatSvgLabelLines(lane.label, {
+      maxWidth: Math.max(32, config.paddingLeft - 48),
+      maxHeight: Math.max(18, config.nodeHeight),
+      fontSize: 14,
+      minFontSize: 10,
+      maxLines: 2,
+      strategy: labelFitStrategy,
+    });
     return `
-      <text class="lane-label" x="24" y="${y + 5}">${escapeXml(lane.label)}</text>
+      <text class="lane-label" x="24" y="${y}" font-size="${label.fontSize}">${renderLabelTspans(label, 24)}</text>
       <line class="lane-line" x1="${config.paddingLeft - 18}" y1="${y}" x2="${width - config.paddingRight / 2}" y2="${y}" />`;
   });
 
@@ -316,10 +327,18 @@ export function renderWorkflowSvg(workflow, options = {}) {
 
   const nodes = workflow.nodes.map((node) => {
     const { x, y } = nodePosition(node);
+    const label = formatSvgLabelLines(node.label, {
+      maxWidth: Math.max(24, config.nodeWidth - 16),
+      maxHeight: Math.max(12, config.nodeHeight - 8),
+      fontSize: 14,
+      minFontSize: 10,
+      maxLines: 3,
+      strategy: labelFitStrategy,
+    });
     return `
       <g class="node" transform="translate(${x}, ${y})">
         <rect width="${config.nodeWidth}" height="${config.nodeHeight}" rx="8" />
-        <text x="${config.nodeWidth / 2}" y="${config.nodeHeight / 2 + 5}">${escapeXml(node.label)}</text>
+        <text x="${config.nodeWidth / 2}" y="${config.nodeHeight / 2}" font-size="${label.fontSize}">${renderLabelTspans(label, config.nodeWidth / 2)}</text>
       </g>`;
   });
 
@@ -428,6 +447,129 @@ function cubicBezierPoint(start, control1, control2, end, t) {
     + (3 * inverseT ** 2 * t * control1)
     + (3 * inverseT * t ** 2 * control2)
     + (t ** 3 * end);
+}
+
+function formatSvgLabelLines(label, constraints) {
+  const config = {
+    fontSize: 14,
+    minFontSize: 10,
+    lineHeightRatio: 1.18,
+    maxLines: Infinity,
+    strategy: workflowSvgDefaults.labelFitStrategy,
+    ...constraints,
+  };
+  const segments = String(label).split("<br>");
+  const strategy = normalizeLabelFitStrategy(config.strategy);
+
+  if (strategy === "shrink-first") {
+    const manualFit = fitUnwrappedSegments(segments, config);
+    if (manualFit) return manualFit;
+  }
+
+  return fitWrappedSegments(segments, config);
+}
+
+function fitUnwrappedSegments(segments, config) {
+  for (let fontSize = config.fontSize; fontSize >= config.minFontSize; fontSize -= 1) {
+    const lines = segments.map((segment) => segment.trim());
+    if (labelLinesFit(lines, fontSize, config)) return labelLayout(lines, fontSize, config);
+  }
+
+  return null;
+}
+
+function fitWrappedSegments(segments, config) {
+  for (let fontSize = config.fontSize; fontSize >= config.minFontSize; fontSize -= 1) {
+    const lines = wrapLabelSegments(segments, fontSize, config.maxWidth);
+    if (labelLinesFit(lines, fontSize, config)) return labelLayout(lines, fontSize, config);
+  }
+
+  return truncateLabelLines(wrapLabelSegments(segments, config.minFontSize, config.maxWidth), config);
+}
+
+function labelLinesFit(lines, fontSize, config) {
+  const maxLines = maxVisibleLabelLines(fontSize, config);
+  return lines.length <= maxLines && lines.every((line) => measureLabelText(line, fontSize) <= config.maxWidth);
+}
+
+function labelLayout(lines, fontSize, config) {
+  const lineHeight = Math.ceil(fontSize * config.lineHeightRatio);
+  const startDy = Math.round((fontSize * 0.35 - ((lines.length - 1) * lineHeight) / 2) * 10) / 10;
+  return { lines, fontSize, lineHeight, startDy };
+}
+
+function truncateLabelLines(lines, config) {
+  const fontSize = config.minFontSize;
+  const visibleLines = lines.slice(0, maxVisibleLabelLines(fontSize, config));
+  if (visibleLines.length === 0) return labelLayout([""], fontSize, config);
+
+  if (lines.length > visibleLines.length) {
+    visibleLines[visibleLines.length - 1] = truncateLabelLine(visibleLines[visibleLines.length - 1], fontSize, config.maxWidth);
+  }
+
+  return labelLayout(visibleLines, fontSize, config);
+}
+
+function maxVisibleLabelLines(fontSize, config) {
+  const lineHeight = Math.ceil(fontSize * config.lineHeightRatio);
+  return Math.max(1, Math.min(config.maxLines, Math.floor(config.maxHeight / lineHeight)));
+}
+
+function wrapLabelSegments(segments, fontSize, maxWidth) {
+  return segments.flatMap((segment) => wrapLabelLine(segment.trim(), fontSize, maxWidth));
+}
+
+function wrapLabelLine(line, fontSize, maxWidth) {
+  if (!line) return [""];
+  const tokens = Array.from(line);
+  const lines = [];
+  let current = "";
+
+  for (const token of tokens) {
+    const next = current + token;
+    if (current && measureLabelText(next, fontSize) > maxWidth) {
+      lines.push(current);
+      current = token.trimStart();
+    } else {
+      current = next;
+    }
+  }
+
+  if (current || lines.length === 0) lines.push(current);
+  return lines;
+}
+
+function truncateLabelLine(line, fontSize, maxWidth) {
+  const suffix = "...";
+  if (measureLabelText(line, fontSize) <= maxWidth) return line;
+  let next = line;
+  while (next && measureLabelText(`${next}${suffix}`, fontSize) > maxWidth) {
+    next = Array.from(next).slice(0, -1).join("");
+  }
+  return `${next}${suffix}`;
+}
+
+function renderLabelTspans(label, x) {
+  return label.lines.map((line, index) => {
+    const dy = index === 0 ? label.startDy : label.lineHeight;
+    return `<tspan x="${x}" dy="${dy}">${escapeXml(line)}</tspan>`;
+  }).join("");
+}
+
+function measureLabelText(value, fontSize) {
+  return Array.from(String(value)).reduce((width, character) => width + characterWidthRatio(character) * fontSize, 0);
+}
+
+function characterWidthRatio(character) {
+  if (/\s/.test(character)) return 0.34;
+  if (/[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]/u.test(character)) return 1;
+  if (/[A-Z0-9]/.test(character)) return 0.62;
+  if (/[a-z]/.test(character)) return 0.56;
+  return 0.48;
+}
+
+function normalizeLabelFitStrategy(value) {
+  return LABEL_FIT_STRATEGIES.has(value) ? value : workflowSvgDefaults.labelFitStrategy;
 }
 
 function stripComment(line) {
