@@ -140,9 +140,9 @@ test("renders only nodes referenced by workflow edges", () => {
   assert.equal(parsed.nodes.length, 3);
   assert.deepEqual(workflow.nodes.map((node) => node.id), ["node1", "node2"]);
   assert.equal([...svg.matchAll(/<g class="node"/g)].length, 2);
-  assert.match(svg, />ノード1<\/text>/);
-  assert.match(svg, />ノード2<\/text>/);
-  assert.doesNotMatch(svg, />x<\/text>/);
+  assert.match(svg, />ノード1<\/tspan>/);
+  assert.match(svg, />ノード2<\/tspan>/);
+  assert.doesNotMatch(svg, />x<\/tspan>/);
 });
 
 test("uses invisible edges for layout and cycle detection", () => {
@@ -468,6 +468,7 @@ test("exports renderer defaults for UI settings", () => {
       nodeWidth: workflowSvgDefaults.nodeWidth,
       nodeHeight: workflowSvgDefaults.nodeHeight,
       showTimeLabels: workflowSvgDefaults.showTimeLabels,
+      labelFitStrategy: workflowSvgDefaults.labelFitStrategy,
     },
     {
       gridXSize: 188,
@@ -475,6 +476,7 @@ test("exports renderer defaults for UI settings", () => {
       nodeWidth: 112,
       nodeHeight: 42,
       showTimeLabels: true,
+      labelFitStrategy: "wrap-first",
     },
   );
 });
@@ -523,6 +525,61 @@ test("can hide time labels while keeping time lines", () => {
   assert.match(svg, /class="time-line"/);
 });
 
+test("wraps long node labels before shrinking by default", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Long labels
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: 長い長い長い長い長い
+  - b: Done
+
+## workflow
+- a -> b
+`)));
+
+  assert.match(svg, /<text x="56" y="21" font-size="14"><tspan x="56" dy="-3\.6">長い長い長い<\/tspan><tspan x="56" dy="17">長い長い<\/tspan><\/text>/);
+});
+
+test("can shrink long node labels before wrapping", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Shrink labels
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: ABCDEFGHIJKL
+  - b: Done
+
+## workflow
+- a -> b
+`)), { labelFitStrategy: "shrink-first" });
+
+  assert.match(svg, /<text x="56" y="21" font-size="12"><tspan x="56" dy="4\.2">ABCDEFGHIJKL<\/tspan><\/text>/);
+});
+
+test("renders explicit label line breaks with tspans", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Manual breaks
+
+## lanes
+- lane_1: 営業<br>承認
+
+## nodes
+- lane_1
+  - a: 見積<br>承認
+  - b: Done
+
+## workflow
+- a -> b
+`)));
+
+  assert.match(svg, /<text class="lane-label" x="24" y="137" font-size="14"><tspan x="24" dy="-3\.6">営業<\/tspan><tspan x="24" dy="17">承認<\/tspan><\/text>/);
+  assert.match(svg, /<text x="56" y="21" font-size="14"><tspan x="56" dy="-3\.6">見積<\/tspan><tspan x="56" dy="17">承認<\/tspan><\/text>/);
+});
+
 test("separates multi-lane connector curves by lane pair", () => {
   const crossingSample = `# Crossing
 
@@ -567,4 +624,23 @@ test("escapes svg text content", () => {
   assert.match(svg, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.match(svg, /&lt;Lane &amp; One&gt;/);
   assert.match(svg, /&lt;Node &amp; One&gt;/);
+});
+
+test("keeps non-br tag-like label text escaped", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Escaped breaks
+
+## lanes
+- lane_1: Safe<br/>Lane
+
+## nodes
+- lane_1
+  - a: Safe<br/>Break
+  - b: Done
+
+## workflow
+- a -> b
+`)), { nodeWidth: 220 });
+
+  assert.match(svg, /Safe&lt;br\/&gt;La/);
+  assert.match(svg, /Safe&lt;br\/&gt;Break/);
 });
