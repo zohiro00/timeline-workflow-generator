@@ -20,18 +20,55 @@ test.after(async () => {
   devServer?.kill("SIGTERM");
 });
 
-test("top page output example communicates the generated SVG result", async () => {
+test("top page output example communicates the generated output result", async () => {
   const page = await openTopPage({ width: 1280, height: 820 });
 
   assert.match(await page.locator(".hero-badge").textContent(), /Markdown workflow to timeline SVG/);
   assert.match(await page.locator(".hero-title").textContent(), /Markdownから、時系列ワークフロー図を自動生成/);
-  assert.equal(await page.locator(".demo-output .block-label").textContent(), "Output SVG");
+  assert.deepEqual(await page.locator(".demo-block .block-label").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "Input",
+    "Output",
+  ]);
+  const demoLayout = await page.locator(".demo-flow").evaluate((flow) => {
+    const [inputBlock, outputBlock] = flow.querySelectorAll(".demo-block");
+    const [inputLabel, outputLabel] = flow.querySelectorAll(".block-label");
+    const inputRect = inputBlock.getBoundingClientRect();
+    const outputRect = outputBlock.getBoundingClientRect();
+    const inputLabelRect = inputLabel.getBoundingClientRect();
+    const outputLabelRect = outputLabel.getBoundingClientRect();
+    return {
+      blockHeightDelta: Math.abs(inputRect.height - outputRect.height),
+      labelTopDelta: Math.abs(inputLabelRect.top - outputLabelRect.top),
+    };
+  });
+  assert.ok(demoLayout.blockHeightDelta <= 1);
+  assert.ok(demoLayout.labelTopDelta <= 1);
+  assert.deepEqual(await page.locator(".demo-flow .demo-block:not(.demo-output) code").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "## lanes",
+    "- req: 申請",
+    "- desk: 受付",
+    "## nodes",
+    "- req",
+    "  - a1: 作成",
+    "  - a2: 承認",
+    "- desk",
+    "  - b1: 完了",
+    "## workflow",
+    "- a1 -> a2 -.-> b1",
+  ]);
   await expectLocatorVisible(page.locator(".mini-timeline"));
   await expectLocatorVisible(page.getByText("依存関係から時系列位置を自動整列"));
   assert.deepEqual(await page.locator(".mini-lane-label").evaluateAll((items) => items.map((item) => item.textContent)), [
     "申請",
     "受付",
   ]);
+  assert.deepEqual(await page.locator(".mini-node-label").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "作成",
+    "承認",
+    "完了",
+  ]);
+  assert.equal(await page.getByText("差戻").count(), 0);
+  assert.equal(await page.getByText("待機").count(), 0);
   assert.equal(await page.locator(".mini-arrow").count(), 2);
 
   await page.close();

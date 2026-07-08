@@ -173,29 +173,51 @@ function renderTopPage() {
           <div class="demo-flow" aria-label="Before and after example">
             <div class="demo-block">
               <div class="block-label">Input</div>
+              <code>## lanes</code>
+              <code>- req: 申請</code>
+              <code>- desk: 受付</code>
               <code>## nodes</code>
+              <code>- req</code>
               <code>  - a1: 作成</code>
-              <code>- a1 -&gt; a2 -&gt; b1</code>
+              <code>  - a2: 承認</code>
+              <code>- desk</code>
+              <code>  - b1: 完了</code>
+              <code>## workflow</code>
+              <code>- a1 -&gt; a2 -.-&gt; b1</code>
             </div>
             <div class="demo-arrow">→</div>
             <div class="demo-block demo-output">
-              <div class="block-label">Output SVG</div>
-              <div class="mini-timeline" aria-label="レーン型タイムラインSVGの生成例">
-                <div class="mini-time" aria-hidden="true"><span>Step 1</span><span>Step 2</span><span>Step 3</span></div>
-                <div class="mini-lane">
-                  <span class="mini-lane-label">申請</span>
-                  <span class="mini-node">作成</span>
-                  <span class="mini-arrow"></span>
-                  <span class="mini-node">承認</span>
-                  <span class="mini-node mini-node-muted">差戻</span>
-                </div>
-                <div class="mini-lane">
-                  <span class="mini-lane-label">受付</span>
-                  <span class="mini-node mini-node-ghost">待機</span>
-                  <span class="mini-arrow mini-arrow-bridge"></span>
-                  <span class="mini-node mini-node-final">完了</span>
-                </div>
-              </div>
+              <div class="block-label">Output</div>
+              <svg class="mini-timeline" viewBox="0 0 340 146" role="img" aria-label="レーン型タイムラインSVGの生成例">
+                <defs>
+                  <marker id="mini-arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0 0L7 3L0 6Z" />
+                  </marker>
+                </defs>
+                <line class="mini-time-line" x1="92" y1="32" x2="92" y2="128" />
+                <line class="mini-time-line" x1="196" y1="32" x2="196" y2="128" />
+                <line class="mini-time-line" x1="294" y1="32" x2="294" y2="128" />
+                <line class="mini-lane-divider" x1="44" y1="26" x2="44" y2="130" />
+                <text class="mini-time-label" x="92" y="32">Step 1</text>
+                <text class="mini-time-label" x="196" y="32">Step 2</text>
+                <text class="mini-time-label" x="294" y="32">Step 3</text>
+                <text class="mini-lane-label" x="12" y="68">申請</text>
+                <text class="mini-lane-label" x="12" y="112">受付</text>
+                <path class="mini-arrow" d="M126 64H158" />
+                <path class="mini-arrow mini-arrow-bridge" d="M230 64C252 64 238 108 258 108" />
+                <g class="mini-node" transform="translate(58 49)">
+                  <rect class="mini-node-box" width="68" height="30" rx="5" />
+                  <text class="mini-node-label" x="34" y="19">作成</text>
+                </g>
+                <g class="mini-node" transform="translate(162 49)">
+                  <rect class="mini-node-box" width="68" height="30" rx="5" />
+                  <text class="mini-node-label" x="34" y="19">承認</text>
+                </g>
+                <g class="mini-node" transform="translate(258 93)">
+                  <rect class="mini-node-box mini-node-final" width="68" height="30" rx="5" />
+                  <text class="mini-node-label" x="34" y="19">完了</text>
+                </g>
+              </svg>
               <p class="output-caption">依存関係から時系列位置を自動整列</p>
             </div>
           </div>
