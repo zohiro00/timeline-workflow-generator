@@ -160,10 +160,13 @@ function renderTopPage() {
             <span class="badge-dot"></span>
             Markdown workflow to timeline SVG
           </div>
-          <h1 class="hero-title">Markdownから、<br><span>時系列ワークフロー図</span>を自動生成</h1>
+          <h1 class="hero-title">
+            <span class="hero-title-lead">Markdownから、資料に貼れる</span><br>
+            <span class="hero-title-accent no-break">時系列ワークフロー図</span><wbr><span class="hero-title-tail no-break">を自動生成</span>
+          </h1>
           <p class="hero-sub">
-            Markdownの lanes / nodes / workflow セクションから、レーン・時系列・依存関係を読み取り、
-            そのまま資料に貼りやすいSVGを生成します。
+            lanes / nodes / workflow に業務の流れを書くだけで、レーン、時系列、依存関係を読み取り、
+            PowerPointに貼りやすいSVGとして整えます。
           </p>
           <a class="hero-cta" href="/engine">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
@@ -223,14 +226,72 @@ function renderTopPage() {
           </div>
         </section>
 
+        <section class="narrative-section problem-section" aria-labelledby="problem-title">
+          <div class="section-kicker">Problem</div>
+          <h2 id="problem-title">図形を動かすたびに、<span class="no-break">ワークフロー</span>の説明が止まってしまう</h2>
+          <p>
+            PowerPointやExcelで<span class="no-break">業務フロー図</span>を作ると、ノードを1つ増やすだけで、矢印、余白、レーン位置、
+            時系列の見え方を手で直す必要があります。レビューで順番が変わるたびに、図の整列作業もやり直しになります。
+          </p>
+        </section>
+
+        <section class="narrative-section solution-section" aria-labelledby="solution-title">
+          <div class="section-kicker">Solution</div>
+          <h2 id="solution-title">流れをテキストで書けば、<span class="no-break">依存関係</span>から時系列を自動でそろえる</h2>
+          <p>
+            Timeline Workflow Generatorは、レーン、ノード、<span class="no-break">依存関係</span>をMarkdownで受け取り、
+            DAGレイアウトで横方向の時系列位置を計算します。図の座標を指定せずに、説明したい業務の順序に集中できます。
+          </p>
+        </section>
+
         <section class="features" aria-labelledby="features-title">
-          <h2 id="features-title">Features</h2>
+          <div class="section-kicker">Features</div>
+          <h2 id="features-title">主な特徴</h2>
           <div class="features-grid">
-            ${featureCard("Markdown対応", "文章の中に workflow ブロックを書くだけで図を生成できます。")}
-            ${featureCard("時系列同期", "依存関係を読み取り、ノードの時間位置を自動で揃えます。")}
-            ${featureCard("矢印種別", "実線・点線・中止マーク・見えない依存で分岐を表現できます。")}
-            ${featureCard("調整とSVG保存", "配色、サイズ、ズームを整え、資料に貼りやすいSVGとして保存できます。")}
+            ${featureCard("Markdownで管理", "文章の中に workflow ブロックを書くだけで、図の元データをテキストとして管理できます。")}
+            ${featureCard("時系列を自動整列", "依存関係を読み取り、ノードの横位置を自動でそろえます。")}
+            ${featureCard("資料で使いやすく出力", "SVG / PNG のダウンロードや画像コピーで、PowerPointへ貼り付けやすく出力できます。")}
           </div>
+        </section>
+
+        <section class="steps" aria-labelledby="steps-title">
+          <div class="section-kicker">Steps</div>
+          <h2 id="steps-title">3ステップで作成</h2>
+          <div class="steps-grid">
+            ${stepCard("1", "Markdownを書く", "レーン、ノード、依存関係を workflow 記法で入力します。")}
+            ${stepCard("2", "プレビューで確認", "自動整列されたタイムラインを見ながら、表現を調整します。")}
+            ${stepCard("3", "資料へ出力", "完成した図をダウンロードまたは画像コピーして、資料へ貼り付けます。")}
+          </div>
+        </section>
+
+        <section class="use-cases" aria-labelledby="use-cases-title">
+          <div class="section-kicker">Use Cases</div>
+          <h2 id="use-cases-title">順序と担当レーンがある<wbr><span class="no-break">業務の下書き</span>に</h2>
+          <div class="use-case-grid">
+            ${useCaseCard("稟議・申請", "申請者、承認者、経理などのレーンを分けて、承認経路や差戻しを整理できます。")}
+            ${useCaseCard("購買・発注", "見積、承認、発注、納品確認までの担当と順序を1枚の流れにできます。")}
+            ${useCaseCard("障害対応・開発工程", "調査、判断、対応、確認の依存関係を時系列で共有できます。")}
+          </div>
+        </section>
+
+        <section class="faq" aria-labelledby="faq-title">
+          <div class="section-kicker">FAQ</div>
+          <h2 id="faq-title">よくある不安</h2>
+          <div class="faq-list">
+            ${faqItem("PowerPointで使えますか？", "SVG / PNG のダウンロードや画像コピーで、PowerPointなどの資料へ貼り付けやすい形式で扱えます。")}
+            ${faqItem("Markdown本文から抽出できますか？", "Markdown内の workflow コードブロック、または workflow 記法の本文を入力できます。")}
+            ${faqItem("座標を手で調整する必要はありますか？", "横位置は依存関係から計算します。ユーザーが座標や余白を細かく指定する必要はありません。")}
+            ${faqItem("登録なしで試せますか？", "登録フォームはありません。Engineを開いて、サンプルからすぐに試せます。")}
+          </div>
+        </section>
+
+        <section class="final-cta" aria-labelledby="final-cta-title">
+          <div class="section-kicker">Try It</div>
+          <h2 id="final-cta-title">まずはサンプルから、<span class="no-break">時系列ワークフロー図</span>を作る</h2>
+          <a class="hero-cta" href="/engine">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+            Engineを開く
+          </a>
         </section>
       </main>
 
@@ -239,6 +300,34 @@ function renderTopPage() {
         <a href="/engine">Engine</a>
       </footer>
     </div>
+  `;
+}
+
+function stepCard(number, title, description) {
+  return `
+    <article class="step-card">
+      <div class="step-number">${number}</div>
+      <h3>${title}</h3>
+      <p>${description}</p>
+    </article>
+  `;
+}
+
+function useCaseCard(title, description) {
+  return `
+    <article class="use-case-card">
+      <h3>${title}</h3>
+      <p>${description}</p>
+    </article>
+  `;
+}
+
+function faqItem(question, answer) {
+  return `
+    <details class="faq-item">
+      <summary>${question}</summary>
+      <p>${answer}</p>
+    </details>
   `;
 }
 
