@@ -162,13 +162,21 @@ svg {
 .hero-title {
   margin: 0;
   color: var(--text);
-  font-size: clamp(34px, 5vw, 56px);
+  font-size: clamp(30px, 4.8vw, 52px);
   line-height: 1.12;
   letter-spacing: 0;
+  line-break: strict;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: normal;
 }
 
-.hero-title span {
+.hero-title-accent {
   color: var(--ppt-orange);
+}
+
+.hero-title-tail {
+  color: var(--text);
 }
 
 .hero-sub {
@@ -177,6 +185,10 @@ svg {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.8;
+  line-break: strict;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
 }
 
 .hero-cta {
@@ -351,7 +363,10 @@ svg {
   font-size: 24px;
   line-height: 1.35;
   letter-spacing: 0;
+  line-break: strict;
+  overflow-wrap: normal;
   text-wrap: pretty;
+  word-break: normal;
 }
 
 .narrative-section p {
@@ -360,7 +375,10 @@ svg {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.9;
+  line-break: strict;
+  overflow-wrap: normal;
   text-wrap: pretty;
+  word-break: normal;
 }
 
 .section-kicker {
@@ -399,6 +417,7 @@ svg {
 .feature-card,
 .step-card,
 .use-case-card {
+  min-width: 0;
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -431,7 +450,11 @@ svg {
 .use-case-card h3 {
   margin: 0 0 8px;
   font-size: 14px;
+  line-break: strict;
   line-height: 1.45;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
 }
 
 .feature-card p,
@@ -441,7 +464,10 @@ svg {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.65;
+  line-break: strict;
+  overflow-wrap: normal;
   text-wrap: pretty;
+  word-break: normal;
 }
 
 .step-number {
@@ -484,7 +510,11 @@ svg {
   color: var(--text);
   font-size: 14px;
   font-weight: 800;
+  line-break: strict;
   line-height: 1.5;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
 }
 
 .faq-item p {
@@ -492,7 +522,15 @@ svg {
   padding: 0 18px 16px;
   color: var(--muted);
   font-size: 13px;
+  line-break: strict;
   line-height: 1.7;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: normal;
+}
+
+.no-break {
+  white-space: nowrap;
 }
 
 .final-cta {

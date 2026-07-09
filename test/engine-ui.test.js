@@ -24,7 +24,7 @@ test("top page output example communicates the generated output result", async (
   const page = await openTopPage({ width: 1280, height: 820 });
 
   assert.match(await page.locator(".hero-badge").textContent(), /Markdown workflow to timeline SVG/);
-  assert.match(await page.locator(".hero-title").textContent(), /Markdownから、資料に貼れる時系列ワークフロー図を自動生成/);
+  assert.match(normalizeText(await page.locator(".hero-title").textContent()), /Markdownから、資料に貼れる時系列ワークフロー図を自動生成/);
   assert.equal(await page.locator(".hero .hero-cta").getAttribute("href"), "/engine");
   assert.deepEqual(await page.locator(".demo-block .block-label").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Input",
@@ -113,6 +113,33 @@ test("top page follows the planned information architecture", async () => {
   assert.equal(await page.locator(".final-cta .hero-cta").getAttribute("href"), "/engine");
   assert.equal(await page.getByText("無料登録").count(), 0);
   assert.equal(await page.getByText("利用者の声").count(), 0);
+
+  await page.close();
+});
+
+test("top page keeps Japanese key phrases from awkward line breaks", async () => {
+  const page = await openTopPage({ width: 1280, height: 820 });
+
+  assert.equal(await page.locator(".hero-title-accent").textContent(), "時系列ワークフロー図");
+  assert.equal(await page.locator(".hero-title-tail").textContent(), "を自動生成");
+  const protectedPhrases = await page.locator(".no-break").evaluateAll((items) =>
+    items.map((item) => {
+      const rect = item.getBoundingClientRect();
+      const parentRect = item.parentElement.getBoundingClientRect();
+      const style = getComputedStyle(item);
+      return {
+        text: item.textContent,
+        whiteSpace: style.whiteSpace,
+        fitsParent: rect.width <= parentRect.width + 1,
+      };
+    }),
+  );
+
+  assert.ok(protectedPhrases.length >= 6);
+  for (const phrase of protectedPhrases) {
+    assert.equal(phrase.whiteSpace, "nowrap", phrase.text);
+    assert.equal(phrase.fitsParent, true, phrase.text);
+  }
 
   await page.close();
 });
@@ -705,6 +732,10 @@ async function expectLocatorVisible(locator) {
   const box = await locator.boundingBox();
   assert.ok(box?.width > 0);
   assert.ok(box?.height > 0);
+}
+
+function normalizeText(value) {
+  return value.replace(/\s+/g, "");
 }
 
 async function waitForThemeLabel(page, label) {

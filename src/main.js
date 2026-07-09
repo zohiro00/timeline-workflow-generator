@@ -160,7 +160,10 @@ function renderTopPage() {
             <span class="badge-dot"></span>
             Markdown workflow to timeline SVG
           </div>
-          <h1 class="hero-title">Markdownから、<br><span>資料に貼れる時系列ワークフロー図</span>を自動生成</h1>
+          <h1 class="hero-title">
+            <span class="hero-title-lead">Markdownから、資料に貼れる</span><br>
+            <span class="hero-title-accent no-break">時系列ワークフロー図</span><wbr><span class="hero-title-tail no-break">を自動生成</span>
+          </h1>
           <p class="hero-sub">
             lanes / nodes / workflow に業務の流れを書くだけで、レーン、時系列、依存関係を読み取り、
             PowerPointに貼りやすいSVGとして整えます。
@@ -225,18 +228,18 @@ function renderTopPage() {
 
         <section class="narrative-section problem-section" aria-labelledby="problem-title">
           <div class="section-kicker">Problem</div>
-          <h2 id="problem-title">図形を動かすたびに、ワークフローの説明が止まってしまう</h2>
+          <h2 id="problem-title">図形を動かすたびに、<span class="no-break">ワークフロー</span>の説明が止まってしまう</h2>
           <p>
-            PowerPointやExcelで業務フロー図を作ると、ノードを1つ増やすだけで、矢印、余白、レーン位置、
+            PowerPointやExcelで<span class="no-break">業務フロー図</span>を作ると、ノードを1つ増やすだけで、矢印、余白、レーン位置、
             時系列の見え方を手で直す必要があります。レビューで順番が変わるたびに、図の整列作業もやり直しになります。
           </p>
         </section>
 
         <section class="narrative-section solution-section" aria-labelledby="solution-title">
           <div class="section-kicker">Solution</div>
-          <h2 id="solution-title">流れをテキストで書けば、依存関係から時系列を自動でそろえる</h2>
+          <h2 id="solution-title">流れをテキストで書けば、<span class="no-break">依存関係</span>から時系列を自動でそろえる</h2>
           <p>
-            Timeline Workflow Generatorは、レーン、ノード、依存関係をMarkdownで受け取り、
+            Timeline Workflow Generatorは、レーン、ノード、<span class="no-break">依存関係</span>をMarkdownで受け取り、
             DAGレイアウトで横方向の時系列位置を計算します。図の座標を指定せずに、説明したい業務の順序に集中できます。
           </p>
         </section>
@@ -263,7 +266,7 @@ function renderTopPage() {
 
         <section class="use-cases" aria-labelledby="use-cases-title">
           <div class="section-kicker">Use Cases</div>
-          <h2 id="use-cases-title">順序と担当レーンがある業務の下書きに</h2>
+          <h2 id="use-cases-title">順序と担当レーンがある<wbr><span class="no-break">業務の下書き</span>に</h2>
           <div class="use-case-grid">
             ${useCaseCard("稟議・申請", "申請者、承認者、経理などのレーンを分けて、承認経路や差戻しを整理できます。")}
             ${useCaseCard("購買・発注", "見積、承認、発注、納品確認までの担当と順序を1枚の流れにできます。")}
@@ -284,7 +287,7 @@ function renderTopPage() {
 
         <section class="final-cta" aria-labelledby="final-cta-title">
           <div class="section-kicker">Try It</div>
-          <h2 id="final-cta-title">まずはサンプルから、時系列ワークフロー図を作る</h2>
+          <h2 id="final-cta-title">まずはサンプルから、<span class="no-break">時系列ワークフロー図</span>を作る</h2>
           <a class="hero-cta" href="/engine">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
             Engineを開く
