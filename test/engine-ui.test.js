@@ -24,7 +24,8 @@ test("top page output example communicates the generated output result", async (
   const page = await openTopPage({ width: 1280, height: 820 });
 
   assert.match(await page.locator(".hero-badge").textContent(), /Markdown workflow to timeline SVG/);
-  assert.match(await page.locator(".hero-title").textContent(), /Markdownから、時系列ワークフロー図を自動生成/);
+  assert.match(await page.locator(".hero-title").textContent(), /Markdownから、資料に貼れる時系列ワークフロー図を自動生成/);
+  assert.equal(await page.locator(".hero .hero-cta").getAttribute("href"), "/engine");
   assert.deepEqual(await page.locator(".demo-block .block-label").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Input",
     "Output",
@@ -67,16 +68,58 @@ test("top page output example communicates the generated output result", async (
     "承認",
     "完了",
   ]);
-  assert.equal(await page.getByText("差戻").count(), 0);
-  assert.equal(await page.getByText("待機").count(), 0);
+  assert.doesNotMatch(await page.locator(".mini-timeline").textContent(), /差戻|待機/);
   assert.equal(await page.locator(".mini-arrow").count(), 2);
+
+  await page.close();
+});
+
+test("top page follows the planned information architecture", async () => {
+  const page = await openTopPage({ width: 1280, height: 1200 });
+
+  assert.deepEqual(await page.locator("main > section").evaluateAll((sections) => sections.map((section) => section.className)), [
+    "hero",
+    "narrative-section problem-section",
+    "narrative-section solution-section",
+    "features",
+    "steps",
+    "use-cases",
+    "faq",
+    "final-cta",
+  ]);
+  assert.match(await page.locator("#problem-title").textContent(), /図形を動かすたびに/);
+  assert.match(await page.locator("#solution-title").textContent(), /依存関係から時系列を自動でそろえる/);
+  assert.deepEqual(await page.locator(".feature-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "Markdownで管理",
+    "時系列を自動整列",
+    "SVGで資料に貼れる",
+  ]);
+  assert.deepEqual(await page.locator(".step-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "Markdownを書く",
+    "プレビューで確認",
+    "SVGを保存",
+  ]);
+  assert.deepEqual(await page.locator(".use-case-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "稟議・申請",
+    "購買・発注",
+    "障害対応・開発工程",
+  ]);
+  assert.deepEqual(await page.locator(".faq-item summary").evaluateAll((items) => items.map((item) => item.textContent)), [
+    "PowerPointで使えますか？",
+    "Markdown本文から抽出できますか？",
+    "座標を手で調整する必要はありますか？",
+    "登録なしで試せますか？",
+  ]);
+  assert.equal(await page.locator(".final-cta .hero-cta").getAttribute("href"), "/engine");
+  assert.equal(await page.getByText("無料登録").count(), 0);
+  assert.equal(await page.getByText("利用者の声").count(), 0);
 
   await page.close();
 });
 
 test("top page output example fits on narrow screens", async () => {
   const page = await openTopPage({ width: 360, height: 740 });
-  const overflow = await page.locator(".demo-output").evaluate((item) => item.scrollWidth - item.clientWidth);
+  const overflow = await page.locator(".site-shell").evaluate((item) => item.scrollWidth - item.clientWidth);
 
   assert.ok(overflow <= 1);
 
