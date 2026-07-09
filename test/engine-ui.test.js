@@ -92,12 +92,12 @@ test("top page follows the planned information architecture", async () => {
   assert.deepEqual(await page.locator(".feature-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Markdownで管理",
     "時系列を自動整列",
-    "SVGで資料に貼れる",
+    "資料で使いやすく出力",
   ]);
   assert.deepEqual(await page.locator(".step-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Markdownを書く",
     "プレビューで確認",
-    "SVGを保存",
+    "資料へ出力",
   ]);
   assert.deepEqual(await page.locator(".use-case-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
     "稟議・申請",
@@ -113,6 +113,9 @@ test("top page follows the planned information architecture", async () => {
   assert.equal(await page.locator(".final-cta .hero-cta").getAttribute("href"), "/engine");
   assert.equal(await page.getByText("無料登録").count(), 0);
   assert.equal(await page.getByText("利用者の声").count(), 0);
+  assert.equal(await page.getByText("SVGを保存").count(), 0);
+  assert.equal(await page.getByText("SVGとして保存").count(), 0);
+  assert.equal(await page.getByText("SVG / PNG のダウンロードや画像コピー").count(), 2);
 
   await page.close();
 });

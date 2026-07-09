@@ -250,7 +250,7 @@ function renderTopPage() {
           <div class="features-grid">
             ${featureCard("Markdownで管理", "文章の中に workflow ブロックを書くだけで、図の元データをテキストとして管理できます。")}
             ${featureCard("時系列を自動整列", "依存関係を読み取り、ノードの横位置を自動でそろえます。")}
-            ${featureCard("SVGで資料に貼れる", "配色やサイズを整え、PowerPointに貼りやすいSVGとして保存できます。")}
+            ${featureCard("資料で使いやすく出力", "SVG / PNG のダウンロードや画像コピーで、PowerPointへ貼り付けやすく出力できます。")}
           </div>
         </section>
 
@@ -260,7 +260,7 @@ function renderTopPage() {
           <div class="steps-grid">
             ${stepCard("1", "Markdownを書く", "レーン、ノード、依存関係を workflow 記法で入力します。")}
             ${stepCard("2", "プレビューで確認", "自動整列されたタイムラインを見ながら、表現を調整します。")}
-            ${stepCard("3", "SVGを保存", "完成した図をダウンロードして、資料へ貼り付けます。")}
+            ${stepCard("3", "資料へ出力", "完成した図をダウンロードまたは画像コピーして、資料へ貼り付けます。")}
           </div>
         </section>
 
@@ -278,7 +278,7 @@ function renderTopPage() {
           <div class="section-kicker">FAQ</div>
           <h2 id="faq-title">よくある不安</h2>
           <div class="faq-list">
-            ${faqItem("PowerPointで使えますか？", "SVGとして保存できるため、PowerPointなどの資料へ貼り付けやすい形式で扱えます。")}
+            ${faqItem("PowerPointで使えますか？", "SVG / PNG のダウンロードや画像コピーで、PowerPointなどの資料へ貼り付けやすい形式で扱えます。")}
             ${faqItem("Markdown本文から抽出できますか？", "Markdown内の workflow コードブロック、または workflow 記法の本文を入力できます。")}
             ${faqItem("座標を手で調整する必要はありますか？", "横位置は依存関係から計算します。ユーザーが座標や余白を細かく指定する必要はありません。")}
             ${faqItem("登録なしで試せますか？", "登録フォームはありません。Engineを開いて、サンプルからすぐに試せます。")}
