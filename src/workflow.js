@@ -1,6 +1,7 @@
 const EDGE_DEFINITIONS = [
   { token: "->", type: "solid", marker: "arrow" },
   { token: "-.->", type: "dotted", marker: "arrow", dotted: true },
+  { token: "-.-", type: "dottedLine", dotted: true },
   { token: "-x-", type: "cross", marker: "cross" },
   { token: ".x.", type: "dottedCross", marker: "cross", dotted: true },
   { token: "~>", type: "invisible", visible: false },

@@ -75,7 +75,7 @@ test("keeps markdown headings and %% comments distinct", () => {
   assert.deepEqual(workflow.edges, [{ from: "a", to: "b", type: "solid" }]);
 });
 
-test("parses cross and invisible workflow edges", () => {
+test("parses dotted line, cross, and invisible workflow edges", () => {
   const workflow = parseWorkflow(`# Edge types
 
 ## lanes
@@ -88,17 +88,19 @@ test("parses cross and invisible workflow edges", () => {
   - c: C
   - d: D
   - e: E
+  - f: F
 
 ## workflow
-- a -x- b .x. c
-- c ~> d -> e
+- a -.- b -x- c .x. d
+- d ~> e -> f
 `);
 
   assert.deepEqual(workflow.edges, [
-    { from: "a", to: "b", type: "cross" },
-    { from: "b", to: "c", type: "dottedCross" },
-    { from: "c", to: "d", type: "invisible" },
-    { from: "d", to: "e", type: "solid" },
+    { from: "a", to: "b", type: "dottedLine" },
+    { from: "b", to: "c", type: "cross" },
+    { from: "c", to: "d", type: "dottedCross" },
+    { from: "d", to: "e", type: "invisible" },
+    { from: "e", to: "f", type: "solid" },
   ]);
 });
 
@@ -391,6 +393,25 @@ test("renders svg with labels and connectors", () => {
   assert.match(svg, /edge-dotted/);
   assert.match(svg, /edge-cross-mark/);
   assert.match(svg, /class="edge edge-dotted"/);
+});
+
+test("renders dotted line edges without arrow markers", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Dotted line
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+
+## workflow
+- a -.- b
+`)));
+
+  assert.match(svg, /<path class="edge edge-dotted" d="M 252 137 L 328 137" \/>/);
+  assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
 });
 
 test("renders cross edge types without arrow markers and hides invisible edges", () => {
