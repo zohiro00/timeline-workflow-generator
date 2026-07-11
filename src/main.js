@@ -449,6 +449,7 @@ function renderEnginePage() {
                   <div id="export-menu-list" class="export-menu-list" role="menu" hidden>
                     <button id="copy-image" class="export-menu-item" type="button" role="menuitem">画像をコピー</button>
                     <button id="download-png" class="export-menu-item" type="button" role="menuitem">PNGでダウンロード</button>
+                    <button id="download-pptx" class="export-menu-item" type="button" role="menuitem">PPTXでダウンロード</button>
                     <button id="download-svg" class="export-menu-item" type="button" role="menuitem">SVGでダウンロード</button>
                   </div>
                 </div>
@@ -545,6 +546,7 @@ function mountEngine() {
   const exportMenuList = document.querySelector("#export-menu-list");
   const copyImage = document.querySelector("#copy-image");
   const downloadPng = document.querySelector("#download-png");
+  const downloadPptx = document.querySelector("#download-pptx");
   const download = document.querySelector("#download-svg");
   const starterTemplateButton = document.querySelector("#format-sample");
   const starterCallout = document.querySelector("#starter-callout");
@@ -561,6 +563,7 @@ function mountEngine() {
   let isPreviewMaximized = false;
   let isStarterCalloutDismissed = false;
   let currentSvg = "";
+  let currentWorkflow = null;
   const scheduleRender = debounce(render, 240);
 
   source.value = sampleWorkflowSource;
@@ -585,6 +588,7 @@ function mountEngine() {
   exportMenuToggle.addEventListener("click", toggleExportMenu);
   copyImage.addEventListener("click", copyPngImage);
   downloadPng.addEventListener("click", downloadPngImage);
+  downloadPptx.addEventListener("click", downloadPptxDeck);
   download.addEventListener("click", downloadSvg);
   previewZoomOut.addEventListener("click", () => setPreviewZoom(previewZoom.scale - previewZoomConfig.step, "manual"));
   previewZoomIn.addEventListener("click", () => setPreviewZoom(previewZoom.scale + previewZoomConfig.step, "manual"));
@@ -785,6 +789,7 @@ function mountEngine() {
     updateThemeLabel();
     try {
       const workflow = layoutWorkflow(parseWorkflow(source.value));
+      currentWorkflow = workflow;
       currentSvg = renderWorkflowSvg(workflow, pickWorkflowOptions());
       preview.innerHTML = `<div class="preview-viewport"><div class="preview-art">${currentSvg}</div></div>`;
       syncPreviewZoom();
@@ -793,6 +798,7 @@ function mountEngine() {
       statusSummary.textContent = "Preview updated";
       setExportEnabled(true);
     } catch (error) {
+      currentWorkflow = null;
       if (preview.querySelector("svg")) {
         showStalePreviewNotice();
       } else {
@@ -981,6 +987,20 @@ function mountEngine() {
         new ClipboardItem({ [blob.type]: blob }),
       ]);
       statusSummary.textContent = "Image copied";
+    } catch (error) {
+      showExportError(error);
+    } finally {
+      closeExportMenu();
+    }
+  }
+
+  async function downloadPptxDeck() {
+    if (!currentWorkflow) return;
+    try {
+      const { createWorkflowPptxBlob } = await import("./workflow-pptx.js");
+      const blob = createWorkflowPptxBlob(currentWorkflow, pickWorkflowOptions());
+      downloadBlob(blob, "workflow.pptx");
+      statusSummary.textContent = "PPTX downloaded";
     } catch (error) {
       showExportError(error);
     } finally {

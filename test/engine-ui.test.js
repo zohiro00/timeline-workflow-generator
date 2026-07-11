@@ -336,6 +336,7 @@ test("engine export menu lives in the preview toolbar and closes accessibly", as
   assert.deepEqual(await exportMenu.locator(".export-menu-item").evaluateAll((items) => items.map((item) => item.textContent)), [
     "画像をコピー",
     "PNGでダウンロード",
+    "PPTXでダウンロード",
     "SVGでダウンロード",
   ]);
 
@@ -350,7 +351,7 @@ test("engine export menu lives in the preview toolbar and closes accessibly", as
   await page.close();
 });
 
-test("engine export menu downloads svg and png files", async () => {
+test("engine export menu downloads svg, png, and pptx files", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const exportToggle = page.locator("#export-menu-toggle");
 
@@ -370,6 +371,15 @@ test("engine export menu downloads svg and png files", async () => {
   assert.equal(pngDownload.suggestedFilename(), "workflow.png");
   assert.equal(await pngDownload.failure(), null);
   assert.equal(await page.locator("#status-summary").textContent(), "PNG downloaded");
+
+  await exportToggle.click();
+  const [pptxDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: "PPTXでダウンロード" }).click(),
+  ]);
+  assert.equal(pptxDownload.suggestedFilename(), "workflow.pptx");
+  assert.equal(await pptxDownload.failure(), null);
+  assert.equal(await page.locator("#status-summary").textContent(), "PPTX downloaded");
 
   await page.close();
 });
