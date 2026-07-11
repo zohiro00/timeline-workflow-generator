@@ -12,7 +12,8 @@ const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.ty
 const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
 const LABEL_FIT_STRATEGIES = new Set(["wrap-first", "shrink-first"]);
-const CROSS_MARK_SIZE = 18;
+const CROSS_MARK_SIZE = 20;
+const CROSS_MARK_BACKGROUND_RADIUS = 13;
 const defaultThemeId = "consulting-blue-outline";
 export const workflowSvgDefaults = Object.freeze({
   paddingLeft: 140,
@@ -358,6 +359,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
       .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
       .edge-dotted { stroke-dasharray: 7 7; }
+      .edge-cross-mark-background { fill: ${theme.background}; }
       .edge-cross-mark line { stroke: ${theme.edge}; stroke-width: 3.4; stroke-linecap: round; }
       .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
       .node text { fill: ${theme.nodeText}; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
@@ -437,6 +439,7 @@ function connectorPathData(x1, y1, x2, y2, laneGroupIndex, edgeIndex) {
 function crossMark({ crossX, crossY }) {
   const halfSize = CROSS_MARK_SIZE / 2;
   return `<g class="edge-cross-mark" transform="translate(${crossX}, ${crossY}) rotate(45)">
+        <circle class="edge-cross-mark-background" r="${CROSS_MARK_BACKGROUND_RADIUS}" />
         <line x1="${-halfSize}" y1="0" x2="${halfSize}" y2="0" />
         <line x1="0" y1="${-halfSize}" x2="0" y2="${halfSize}" />
       </g>`;

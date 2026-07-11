@@ -432,6 +432,8 @@ test("renders cross edge types without arrow markers and hides invisible edges",
 `)));
 
   assert.match(svg, /edge-cross-mark/);
+  assert.match(svg, /\.edge-cross-mark-background \{ fill: #ffffff; \}/);
+  assert.match(svg, /<circle class="edge-cross-mark-background" r="13" \/>/);
   assert.match(svg, /translate\(290, 137\) rotate\(45\)/);
   assert.match(svg, /<path class="edge edge-dotted" d="M 440 137 L 516 137" \/>/);
   assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
@@ -512,6 +514,7 @@ test("renders filled blue and gray outline themes", () => {
   assert.match(filledBlueSvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
   assert.match(graySvg, /fill="#595959"/);
   assert.match(graySvg, /\.edge \{ fill: none; stroke: #595959; stroke-width: 2\.4; \}/);
+  assert.match(graySvg, /\.edge-cross-mark-background \{ fill: #ffffff; \}/);
   assert.match(graySvg, /\.node rect \{ fill: #ffffff; stroke: #595959; stroke-width: 2; \}/);
   assert.match(filledGraySvg, /\.node rect \{ fill: #595959; stroke: #595959; stroke-width: 2; \}/);
   assert.match(filledGraySvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
