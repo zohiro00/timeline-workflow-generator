@@ -17,6 +17,7 @@
 - [0003: 変更されうる値のハードコード](0003-hardcoded-changeable-values.md)
 - [0004: Cloudflare Workers 初回公開時の設定混乱](0004-cloudflare-workers-deploy-traps.md)
 - [0005: Codex sandbox で UI テストを通常実行する](0005-codex-ui-test-sandbox.md)
+- [0006: Codex sandbox で Git メタデータ更新を通常実行する](0006-codex-git-metadata-sandbox.md)
 
 ## 書き方
 
@@ -24,8 +25,13 @@
 
 最低限、以下を記録してください。
 
+- 失敗パターンID（セッション横断の累積キー）
 - 何が起きたか
 - 原因
 - アンチパターン
 - 今後の方針
 - 再発防止チェック
+
+失敗パターンIDは、同じ失敗を別セッションでも見つけて累積で数えるための短い識別子です。
+新しい失敗を記録するときは、既存 archives に同じ失敗パターンIDまたは同種のアンチパターンがないか確認してください。
+同じ失敗パターンが累積で 3 回に達した場合、または既知の再発だと判断できる場合は、現行 docs、AGENTS.md から参照される細則、guard script、test、デフォルト手順のいずれかへ改善を昇格してください。
