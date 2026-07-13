@@ -245,6 +245,152 @@ export function layoutWorkflow(workflow) {
   };
 }
 
+export function createWorkflowRenderModel(workflow, options = {}) {
+  const config = {
+    ...workflowSvgDefaults,
+    ...options,
+  };
+  const labelFitStrategy = normalizeLabelFitStrategy(config.labelFitStrategy);
+  const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
+  const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
+  const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
+  const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
+  const height = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
+  const lastLaneBottom = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight;
+  const lastRenderedBottom = Math.max(
+    config.paddingTop + config.nodeHeight,
+    lastLaneBottom,
+    ...workflow.nodes.map((node) => config.paddingTop + node.gridY * config.gridYSize + config.nodeHeight),
+  );
+  const timeLineEndY = Math.min(
+    height - config.paddingBottom / 2,
+    lastRenderedBottom + Math.max(16, config.paddingBottom / 4),
+  );
+  const nodePosition = (node) => ({
+    x: config.paddingLeft + node.gridX * config.gridXSize,
+    y: config.paddingTop + node.gridY * config.gridYSize,
+  });
+
+  const laneRows = workflow.lanes.map((lane, index) => {
+    const y = config.paddingTop + index * config.gridYSize + config.nodeHeight / 2;
+    const label = formatSvgLabelLines(lane.label, {
+      maxWidth: Math.max(32, config.paddingLeft - 48),
+      maxHeight: Math.max(18, config.nodeHeight),
+      fontSize: 14,
+      minFontSize: 10,
+      maxLines: 2,
+      strategy: labelFitStrategy,
+    });
+    return {
+      ...lane,
+      label,
+      labelX: 24,
+      y,
+      line: {
+        x1: config.paddingLeft - 18,
+        y1: y,
+        x2: width - config.paddingRight / 2,
+        y2: y,
+      },
+    };
+  });
+
+  const gridLines = Array.from({ length: maxGridX + 1 }, (_, gridX) => {
+    const x = config.paddingLeft + gridX * config.gridXSize + config.nodeWidth / 2;
+    return {
+      gridX,
+      x,
+      y1: config.paddingTop - 36,
+      y2: timeLineEndY,
+      timeLabel: config.showTimeLabels ? `Step ${gridX + 1}` : "",
+      timeLabelY: config.paddingTop - 48,
+    };
+  });
+
+  const edgeLaneGroupCounts = new Map();
+  const edges = [];
+  workflow.edges.forEach((edge) => {
+    const edgeDefinition = EDGE_DEFINITIONS_BY_TYPE.get(edge.type);
+    if (edgeDefinition.visible === false) return;
+
+    const from = nodeById.get(edge.from);
+    const to = nodeById.get(edge.to);
+    const fromPos = nodePosition(from);
+    const toPos = nodePosition(to);
+    const x1 = fromPos.x + config.nodeWidth;
+    const y1 = fromPos.y + config.nodeHeight / 2;
+    const x2 = toPos.x;
+    const y2 = toPos.y + config.nodeHeight / 2;
+    const sameLane = from.laneId === to.laneId;
+    const forward = to.gridX > from.gridX;
+    const laneGroupKey = `${from.gridY}:${to.gridY}`;
+    const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
+    edgeLaneGroupCounts.set(laneGroupKey, laneGroupIndex + 1);
+    const visibleEdgeIndex = edges.length;
+    const pathData = sameLane && forward
+      ? straightPathData(x1, y1, x2, y2)
+      : connectorPathData(x1, y1, x2, y2, laneGroupIndex, visibleEdgeIndex);
+
+    const classes = ["edge"];
+    if (edgeDefinition.dotted) classes.push("edge-dotted");
+    edges.push({
+      ...edge,
+      classes,
+      dotted: Boolean(edgeDefinition.dotted),
+      marker: edgeDefinition.marker ?? "",
+      fromNode: from,
+      toNode: to,
+      x1,
+      y1,
+      x2,
+      y2,
+      sameLane,
+      forward,
+      pathData,
+      connectorPreset: sameLane && forward ? "straightConnector1" : "bentConnector3",
+      startConnectionIndex: 3,
+      endConnectionIndex: 1,
+    });
+  });
+
+  const nodes = workflow.nodes.map((node) => {
+    const { x, y } = nodePosition(node);
+    const label = formatSvgLabelLines(node.label, {
+      maxWidth: Math.max(24, config.nodeWidth - 16),
+      maxHeight: Math.max(12, config.nodeHeight - 8),
+      fontSize: 14,
+      minFontSize: 10,
+      maxLines: 3,
+      strategy: labelFitStrategy,
+    });
+    return {
+      ...node,
+      x,
+      y,
+      width: config.nodeWidth,
+      height: config.nodeHeight,
+      label,
+    };
+  });
+
+  return {
+    config,
+    theme,
+    width,
+    height,
+    title: {
+      text: workflow.title,
+      x: 24,
+      y: 38,
+      fontSize: 22,
+    },
+    gridLines,
+    laneRows,
+    edges,
+    nodes,
+  };
+}
+
 export function renderWorkflowSvg(workflow, options = {}) {
   const config = {
     ...workflowSvgDefaults,
