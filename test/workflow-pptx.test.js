@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createWorkflowPptxFiles, generateWorkflowPptxBytes, workflowPptxMimeType } from "../src/workflow-pptx.js";
+import { blankPptxTemplateFiles } from "../src/workflow-pptx-template.js";
 import { layoutWorkflow, parseWorkflow } from "../src/workflow.js";
 
 const sample = `# PPTX Connector Test
@@ -33,6 +34,19 @@ test("generates a pptx package without raster image parts", () => {
   assert.ok(files["ppt/slides/slide1.xml"]);
   assert.equal(Object.keys(files).some((path) => path.includes("/media/")), false);
   assert.doesNotMatch(files["ppt/slides/slide1.xml"], /<a:blip|<p:pic/);
+});
+
+test("uses the blank pptx template package and replaces only the workflow slide", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const files = createWorkflowPptxFiles(workflow);
+
+  assert.deepEqual(Object.keys(files).sort(), Object.keys(blankPptxTemplateFiles).sort());
+  assert.notEqual(files["ppt/slides/slide1.xml"], blankPptxTemplateFiles["ppt/slides/slide1.xml"]);
+
+  Object.keys(blankPptxTemplateFiles).forEach((path) => {
+    if (path === "ppt/slides/slide1.xml") return;
+    assert.equal(files[path], blankPptxTemplateFiles[path], `${path} should stay identical to the template`);
+  });
 });
 
 test("writes PowerPoint connector shapes bound to node shape ids", () => {
@@ -71,10 +85,11 @@ test("writes non-empty presentation and master text styles", () => {
   const master = files["ppt/slideMasters/slideMaster1.xml"];
 
   assert.doesNotMatch(presentation, /<p:defaultTextStyle\/>/);
-  assert.match(presentation, /<p:defaultTextStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+  assert.match(presentation, /<p:defaultTextStyle>[\s\S]*<a:lvl1pPr[\s\S]*<a:lvl9pPr/);
   assert.match(master, /<p:titleStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
   assert.match(master, /<p:bodyStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
   assert.match(master, /<p:otherStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+  assert.match(master, /<p:bodyStyle>[\s\S]*<a:lvl9pPr/);
 });
 
 test("writes expected presentation package parts and content types", () => {
@@ -88,8 +103,10 @@ test("writes expected presentation package parts and content types", () => {
     "ppt/viewProps.xml",
     "ppt/tableStyles.xml",
     "ppt/slides/slide1.xml",
+    "ppt/notesSlides/notesSlide1.xml",
     "ppt/slideLayouts/slideLayout1.xml",
     "ppt/slideMasters/slideMaster1.xml",
+    "ppt/notesMasters/notesMaster1.xml",
     "ppt/theme/theme1.xml",
   ].forEach((path) => {
     assert.ok(files[path], `expected ${path}`);
@@ -110,55 +127,88 @@ test("keeps package relationships and presentation r:id references consistent", 
   const presentation = files["ppt/presentation.xml"];
 
   assertRelationship(packageRels, {
-    id: "rId1",
+    id: "rId3",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
     target: "ppt/presentation.xml",
   });
-  assertRelationship(presentationRels, {
+  assertRelationship(packageRels, {
     id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
+    target: "docProps/app.xml",
+  });
+  assertRelationship(packageRels, {
+    id: "rId2",
+    type: "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties",
+    target: "docProps/core.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId2",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
     target: "slides/slide1.xml",
   });
   assertRelationship(presentationRels, {
-    id: "rId2",
+    id: "rId1",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
     target: "slideMasters/slideMaster1.xml",
   });
   assertRelationship(presentationRels, {
     id: "rId3",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster",
+    target: "notesMasters/notesMaster1.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId4",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps",
     target: "presProps.xml",
   });
   assertRelationship(presentationRels, {
-    id: "rId4",
+    id: "rId5",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
     target: "viewProps.xml",
   });
   assertRelationship(presentationRels, {
-    id: "rId5",
+    id: "rId6",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
     target: "theme/theme1.xml",
   });
   assertRelationship(presentationRels, {
-    id: "rId6",
+    id: "rId7",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
     target: "tableStyles.xml",
   });
-  assert.match(presentation, /<p:sldId id="256" r:id="rId1"\/>/);
-  assert.match(presentation, /<p:sldMasterId id="2147483648" r:id="rId2"\/>/);
+  assert.match(presentation, /<p:sldMasterId id="2147483648" r:id="rId1"\/>/);
+  assert.match(presentation, /<p:sldId id="256" r:id="rId2"\/>/);
+  assert.match(presentation, /<p:notesMasterId r:id="rId3"\/>/);
 });
 
-test("keeps slide, layout, master, and theme relationships complete", () => {
+test("keeps slide, notes, layout, master, and theme relationships complete", () => {
   const workflow = layoutWorkflow(parseWorkflow(sample));
   const files = createWorkflowPptxFiles(workflow);
   const slideRels = parseRelationships(files["ppt/slides/_rels/slide1.xml.rels"]);
+  const notesSlideRels = parseRelationships(files["ppt/notesSlides/_rels/notesSlide1.xml.rels"]);
   const layoutRels = parseRelationships(files["ppt/slideLayouts/_rels/slideLayout1.xml.rels"]);
   const masterRels = parseRelationships(files["ppt/slideMasters/_rels/slideMaster1.xml.rels"]);
+  const notesMasterRels = parseRelationships(files["ppt/notesMasters/_rels/notesMaster1.xml.rels"]);
 
   assertRelationship(slideRels, {
     id: "rId1",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
     target: "../slideLayouts/slideLayout1.xml",
+  });
+  assertRelationship(slideRels, {
+    id: "rId2",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide",
+    target: "../notesSlides/notesSlide1.xml",
+  });
+  assertRelationship(notesSlideRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster",
+    target: "../notesMasters/notesMaster1.xml",
+  });
+  assertRelationship(notesSlideRels, {
+    id: "rId2",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
+    target: "../slides/slide1.xml",
   });
   assertRelationship(layoutRels, {
     id: "rId1",
@@ -172,6 +222,11 @@ test("keeps slide, layout, master, and theme relationships complete", () => {
   });
   assertRelationship(masterRels, {
     id: "rId2",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+    target: "../theme/theme1.xml",
+  });
+  assertRelationship(notesMasterRels, {
+    id: "rId1",
     type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
     target: "../theme/theme1.xml",
   });
