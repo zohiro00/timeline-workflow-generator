@@ -41,10 +41,13 @@ test("writes PowerPoint connector shapes bound to node shape ids", () => {
   const aId = shapeId(slide, "a");
   const bId = shapeId(slide, "b");
   const cId = shapeId(slide, "c");
+  const firstNodeIndex = slide.indexOf(`<p:cNvPr id="${aId}" name="a"/>`);
 
   assert.match(slide, /<p:cxnSp>/);
   assert.match(slide, /<a:prstGeom prst="straightConnector1"><a:avLst\/><\/a:prstGeom>/);
   assert.match(slide, /<a:prstGeom prst="bentConnector3"><a:avLst\/><\/a:prstGeom>/);
+  assert.notEqual(firstNodeIndex, -1);
+  assert.ok(firstNodeIndex < connectedConnectorIndex(slide), "node shapes should be written before bound connectors");
   assert.match(slide, connectionPattern(aId, bId));
   assert.match(slide, connectionPattern(bId, cId));
   assert.match(slide, /<a:tailEnd type="triangle"\/>/);
@@ -61,6 +64,19 @@ test("writes complete theme style lists for PowerPoint repair-free loading", () 
   assert.equal(countElements(theme, "a:bgFillStyleLst", "a:solidFill|a:gradFill|a:blipFill"), 3);
 });
 
+test("writes non-empty presentation and master text styles", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const files = createWorkflowPptxFiles(workflow);
+  const presentation = files["ppt/presentation.xml"];
+  const master = files["ppt/slideMasters/slideMaster1.xml"];
+
+  assert.doesNotMatch(presentation, /<p:defaultTextStyle\/>/);
+  assert.match(presentation, /<p:defaultTextStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+  assert.match(master, /<p:titleStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+  assert.match(master, /<p:bodyStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+  assert.match(master, /<p:otherStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
+});
+
 function shapeId(slideXml, name) {
   const match = slideXml.match(new RegExp(`<p:cNvPr id="(\\d+)" name="${name}"\\/>`));
   assert.ok(match, `expected shape named ${name}`);
@@ -69,6 +85,13 @@ function shapeId(slideXml, name) {
 
 function connectionPattern(fromId, toId) {
   return new RegExp(`<a:stCxn id="${fromId}" idx="3"\\/>\\s*<a:endCxn id="${toId}" idx="1"\\/>`);
+}
+
+function connectedConnectorIndex(slideXml) {
+  for (const match of slideXml.matchAll(/<p:cxnSp>[\s\S]*?<\/p:cxnSp>/g)) {
+    if (match[0].includes("<a:stCxn")) return match.index;
+  }
+  assert.fail("expected a bound connector");
 }
 
 function countElements(xml, parentTag, childTagPattern) {

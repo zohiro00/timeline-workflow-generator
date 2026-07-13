@@ -100,6 +100,22 @@ function createSlideXml(model) {
     }));
   });
 
+  model.nodes.forEach((node) => {
+    shapes.push(nodeXml({
+      id: nodeShapeIds.get(node.id),
+      name: node.id,
+      x: layout.x(node.x),
+      y: layout.y(node.y),
+      width: layout.size(node.width),
+      height: layout.size(node.height),
+      textLines: node.label.lines,
+      fontSize: layout.fontSize(node.label.fontSize),
+      fill: model.theme.nodeFill,
+      stroke: model.theme.nodeStroke,
+      textColor: model.theme.nodeText,
+    }));
+  });
+
   model.edges.forEach((edge) => {
     shapes.push(connectorXml({
       id: nextShapeId++,
@@ -144,22 +160,6 @@ function createSlideXml(model) {
         width: layout.size(3.4),
       }));
     }
-  });
-
-  model.nodes.forEach((node) => {
-    shapes.push(nodeXml({
-      id: nodeShapeIds.get(node.id),
-      name: node.id,
-      x: layout.x(node.x),
-      y: layout.y(node.y),
-      width: layout.size(node.width),
-      height: layout.size(node.height),
-      textLines: node.label.lines,
-      fontSize: layout.fontSize(node.label.fontSize),
-      fill: model.theme.nodeFill,
-      stroke: model.theme.nodeStroke,
-      textColor: model.theme.nodeText,
-    }));
   });
 
   shapes.push(textBoxXml({
@@ -431,7 +431,7 @@ function presentationXml() {
   <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
   <p:sldSz cx="${slideWidthEmu}" cy="${slideHeightEmu}" type="wide"/>
   <p:notesSz cx="6858000" cy="9144000"/>
-  <p:defaultTextStyle/>
+  ${defaultTextStyleXml()}
 </p:presentation>`);
 }
 
@@ -459,8 +459,50 @@ function slideMasterXml() {
   </p:cSld>
   <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
   <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
-  <p:txStyles><p:titleStyle/><p:bodyStyle/><p:otherStyle/></p:txStyles>
+  ${masterTextStylesXml()}
 </p:sldMaster>`);
+}
+
+function defaultTextStyleXml() {
+  return `\
+<p:defaultTextStyle>
+  ${textListStyleBody(1800)}
+</p:defaultTextStyle>`;
+}
+
+function masterTextStylesXml() {
+  return `\
+<p:txStyles>
+  <p:titleStyle>
+    ${textListStyleBody(4400)}
+  </p:titleStyle>
+  <p:bodyStyle>
+    ${textListStyleBody(3200)}
+  </p:bodyStyle>
+  <p:otherStyle>
+    ${textListStyleBody(1800)}
+  </p:otherStyle>
+</p:txStyles>`;
+}
+
+function textListStyleBody(fontSize) {
+  return `\
+<a:defPPr>
+  <a:defRPr lang="ja-JP" sz="${fontSize}">
+    <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
+    <a:latin typeface="+mn-lt"/>
+    <a:ea typeface="+mn-ea"/>
+    <a:cs typeface="+mn-cs"/>
+  </a:defRPr>
+</a:defPPr>
+<a:lvl1pPr marL="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
+  <a:defRPr lang="ja-JP" sz="${fontSize}">
+    <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
+    <a:latin typeface="+mn-lt"/>
+    <a:ea typeface="+mn-ea"/>
+    <a:cs typeface="+mn-cs"/>
+  </a:defRPr>
+</a:lvl1pPr>`;
 }
 
 function themeXml() {
