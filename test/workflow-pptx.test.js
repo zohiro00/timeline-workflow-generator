@@ -77,6 +77,106 @@ test("writes non-empty presentation and master text styles", () => {
   assert.match(master, /<p:otherStyle>[\s\S]*<a:defPPr>[\s\S]*<a:lvl1pPr/);
 });
 
+test("writes expected presentation package parts and content types", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const files = createWorkflowPptxFiles(workflow);
+  const contentTypes = files["[Content_Types].xml"];
+
+  [
+    "ppt/presentation.xml",
+    "ppt/presProps.xml",
+    "ppt/viewProps.xml",
+    "ppt/tableStyles.xml",
+    "ppt/slides/slide1.xml",
+    "ppt/slideLayouts/slideLayout1.xml",
+    "ppt/slideMasters/slideMaster1.xml",
+    "ppt/theme/theme1.xml",
+  ].forEach((path) => {
+    assert.ok(files[path], `expected ${path}`);
+    assert.match(contentTypes, new RegExp(`PartName="/${escapeRegExp(path)}"`));
+  });
+
+  assert.match(contentTypes, /Extension="rels" ContentType="application\/vnd\.openxmlformats-package\.relationships\+xml"/);
+  assert.match(contentTypes, /PartName="\/ppt\/presProps\.xml" ContentType="application\/vnd\.openxmlformats-officedocument\.presentationml\.presProps\+xml"/);
+  assert.match(contentTypes, /PartName="\/ppt\/viewProps\.xml" ContentType="application\/vnd\.openxmlformats-officedocument\.presentationml\.viewProps\+xml"/);
+  assert.match(contentTypes, /PartName="\/ppt\/tableStyles\.xml" ContentType="application\/vnd\.openxmlformats-officedocument\.presentationml\.tableStyles\+xml"/);
+});
+
+test("keeps package relationships and presentation r:id references consistent", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const files = createWorkflowPptxFiles(workflow);
+  const packageRels = parseRelationships(files["_rels/.rels"]);
+  const presentationRels = parseRelationships(files["ppt/_rels/presentation.xml.rels"]);
+  const presentation = files["ppt/presentation.xml"];
+
+  assertRelationship(packageRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    target: "ppt/presentation.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
+    target: "slides/slide1.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId2",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
+    target: "slideMasters/slideMaster1.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId3",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps",
+    target: "presProps.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId4",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
+    target: "viewProps.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId5",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+    target: "theme/theme1.xml",
+  });
+  assertRelationship(presentationRels, {
+    id: "rId6",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
+    target: "tableStyles.xml",
+  });
+  assert.match(presentation, /<p:sldId id="256" r:id="rId1"\/>/);
+  assert.match(presentation, /<p:sldMasterId id="2147483648" r:id="rId2"\/>/);
+});
+
+test("keeps slide, layout, master, and theme relationships complete", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const files = createWorkflowPptxFiles(workflow);
+  const slideRels = parseRelationships(files["ppt/slides/_rels/slide1.xml.rels"]);
+  const layoutRels = parseRelationships(files["ppt/slideLayouts/_rels/slideLayout1.xml.rels"]);
+  const masterRels = parseRelationships(files["ppt/slideMasters/_rels/slideMaster1.xml.rels"]);
+
+  assertRelationship(slideRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
+    target: "../slideLayouts/slideLayout1.xml",
+  });
+  assertRelationship(layoutRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
+    target: "../slideMasters/slideMaster1.xml",
+  });
+  assertRelationship(masterRels, {
+    id: "rId1",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
+    target: "../slideLayouts/slideLayout1.xml",
+  });
+  assertRelationship(masterRels, {
+    id: "rId2",
+    type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+    target: "../theme/theme1.xml",
+  });
+});
+
 function shapeId(slideXml, name) {
   const match = slideXml.match(new RegExp(`<p:cNvPr id="(\\d+)" name="${name}"\\/>`));
   assert.ok(match, `expected shape named ${name}`);
@@ -98,4 +198,27 @@ function countElements(xml, parentTag, childTagPattern) {
   const parent = xml.match(new RegExp(`<${parentTag}>[\\s\\S]*?<\\/${parentTag}>`));
   assert.ok(parent, `expected ${parentTag}`);
   return (parent[0].match(new RegExp(`<(${childTagPattern})(\\s|>)`, "g")) ?? []).length;
+}
+
+function parseRelationships(xml) {
+  return Array.from(xml.matchAll(/<Relationship Id="([^"]+)" Type="([^"]+)" Target="([^"]+)"\/>/g), (match) => ({
+    id: match[1],
+    type: match[2],
+    target: match[3],
+  }));
+}
+
+function assertRelationship(relationships, expected) {
+  assert.ok(
+    relationships.some((relationship) => (
+      relationship.id === expected.id
+      && relationship.type === expected.type
+      && relationship.target === expected.target
+    )),
+    `expected relationship ${JSON.stringify(expected)}`,
+  );
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

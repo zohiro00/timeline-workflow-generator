@@ -28,13 +28,16 @@ export function createWorkflowPptxFiles(workflow, options = {}) {
     "docProps/core.xml": corePropertiesXml(),
     "ppt/presentation.xml": presentationXml(),
     "ppt/_rels/presentation.xml.rels": presentationRelationshipsXml(),
+    "ppt/presProps.xml": presentationPropertiesXml(),
     "ppt/slides/slide1.xml": slide,
     "ppt/slides/_rels/slide1.xml.rels": slideRelationshipsXml(),
     "ppt/slideLayouts/slideLayout1.xml": slideLayoutXml(),
     "ppt/slideLayouts/_rels/slideLayout1.xml.rels": slideLayoutRelationshipsXml(),
     "ppt/slideMasters/slideMaster1.xml": slideMasterXml(),
     "ppt/slideMasters/_rels/slideMaster1.xml.rels": slideMasterRelationshipsXml(),
+    "ppt/tableStyles.xml": tableStylesXml(),
     "ppt/theme/theme1.xml": themeXml(),
+    "ppt/viewProps.xml": viewPropertiesXml(),
   };
 }
 
@@ -378,10 +381,13 @@ function contentTypesXml() {
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>
   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  <Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>
 </Types>`);
 }
 
@@ -399,6 +405,10 @@ function presentationRelationshipsXml() {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps" Target="presProps.xml"/>
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps" Target="viewProps.xml"/>
+  <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>
 </Relationships>`);
 }
 
@@ -433,6 +443,48 @@ function presentationXml() {
   <p:notesSz cx="6858000" cy="9144000"/>
   ${defaultTextStyleXml()}
 </p:presentation>`);
+}
+
+function presentationPropertiesXml() {
+  return xmlDocument(`\
+<p:presentationPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:showPr>
+    <p:present/>
+    <p:sldAll/>
+    <p:penClr><a:srgbClr val="FF0000"/></p:penClr>
+  </p:showPr>
+</p:presentationPr>`);
+}
+
+function viewPropertiesXml() {
+  return xmlDocument(`\
+<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:normalViewPr>
+    <p:restoredLeft sz="15620"/>
+    <p:restoredTop sz="94660"/>
+  </p:normalViewPr>
+  <p:slideViewPr>
+    <p:cSldViewPr>
+      <p:cViewPr varScale="1">
+        <p:scale><a:sx n="100" d="100"/><a:sy n="100" d="100"/></p:scale>
+        <p:origin x="0" y="0"/>
+      </p:cViewPr>
+      <p:guideLst/>
+    </p:cSldViewPr>
+  </p:slideViewPr>
+  <p:notesTextViewPr>
+    <p:cViewPr>
+      <p:scale><a:sx n="100" d="100"/><a:sy n="100" d="100"/></p:scale>
+      <p:origin x="0" y="0"/>
+    </p:cViewPr>
+  </p:notesTextViewPr>
+  <p:gridSpacing cx="72008" cy="72008"/>
+</p:viewPr>`);
+}
+
+function tableStylesXml() {
+  return xmlDocument(`\
+<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`);
 }
 
 function slideLayoutXml() {
