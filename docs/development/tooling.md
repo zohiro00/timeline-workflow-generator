@@ -6,6 +6,7 @@
 - `pnpm` が使えない環境では、作業前に `corepack enable pnpm` と `corepack prepare pnpm@11.7.0 --activate` で使える状態にしてください。
 - 開発サーバー: `pnpm run dev`
 - UI画像キャプチャ: `pnpm run capture:engine`
+- PPTXテンプレート再生成: `pnpm run pptx:template -- <blank.pptx>`
 - テスト: `pnpm test`
 - ビルド: `pnpm run build`
 - 変更ゲート: `pnpm run guard:change`
