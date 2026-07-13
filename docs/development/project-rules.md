@@ -5,6 +5,7 @@
 - このプロジェクトは、Markdown 内の `workflow` コードブロックまたは DSL 本文から、依存関係ベースのレーン型タイムライン SVG を生成する Web アプリです。
 - コア処理は [../../src/workflow.js](../../src/workflow.js) に集約し、パーサー、DAG レイアウト、SVG レンダリングを DOM に依存しない純粋な JavaScript として保ちます。
 - UI は [../../src/main.js](../../src/main.js) と [../../src/styles.css](../../src/styles.css) に閉じ込め、コアロジックへブラウザ状態や DOM 操作を混ぜないでください。
+- PPTX export のテンプレート骨格と再生成手順は [pptx-export.md](pptx-export.md) に従ってください。
 - 要件の根拠は [../requirements_specification.md](../requirements_specification.md) を参照してください。
 
 ## 変更に強い設計ルール

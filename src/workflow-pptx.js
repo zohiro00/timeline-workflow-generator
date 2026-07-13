@@ -1,4 +1,5 @@
 import { createWorkflowRenderModel } from "./workflow.js";
+import { blankPptxTemplateFiles } from "./workflow-pptx-template.js";
 
 export const workflowPptxMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -19,25 +20,9 @@ export function generateWorkflowPptxBytes(workflow, options = {}) {
 
 export function createWorkflowPptxFiles(workflow, options = {}) {
   const model = createWorkflowRenderModel(workflow, options);
-  const slide = createSlideXml(model);
-
   return {
-    "[Content_Types].xml": contentTypesXml(),
-    "_rels/.rels": packageRelationshipsXml(),
-    "docProps/app.xml": appPropertiesXml(),
-    "docProps/core.xml": corePropertiesXml(),
-    "ppt/presentation.xml": presentationXml(),
-    "ppt/_rels/presentation.xml.rels": presentationRelationshipsXml(),
-    "ppt/presProps.xml": presentationPropertiesXml(),
-    "ppt/slides/slide1.xml": slide,
-    "ppt/slides/_rels/slide1.xml.rels": slideRelationshipsXml(),
-    "ppt/slideLayouts/slideLayout1.xml": slideLayoutXml(),
-    "ppt/slideLayouts/_rels/slideLayout1.xml.rels": slideLayoutRelationshipsXml(),
-    "ppt/slideMasters/slideMaster1.xml": slideMasterXml(),
-    "ppt/slideMasters/_rels/slideMaster1.xml.rels": slideMasterRelationshipsXml(),
-    "ppt/tableStyles.xml": tableStylesXml(),
-    "ppt/theme/theme1.xml": themeXml(),
-    "ppt/viewProps.xml": viewPropertiesXml(),
+    ...blankPptxTemplateFiles,
+    "ppt/slides/slide1.xml": createSlideXml(model),
   };
 }
 
@@ -181,7 +166,7 @@ function createSlideXml(model) {
 
   return xmlDocument(`\
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:cSld>
+  <p:cSld name="Slide 1">
     <p:spTree>
       <p:nvGrpSpPr>
         <p:cNvPr id="1" name=""/>
@@ -371,258 +356,6 @@ function solidFillXml(color) {
 
 function rgb(color) {
   return String(color).replace(/^#/, "").toUpperCase();
-}
-
-function contentTypesXml() {
-  return xmlDocument(`\
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-  <Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>
-  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-  <Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/>
-  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-  <Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>
-</Types>`);
-}
-
-function packageRelationshipsXml() {
-  return xmlDocument(`\
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
-</Relationships>`);
-}
-
-function presentationRelationshipsXml() {
-  return xmlDocument(`\
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps" Target="presProps.xml"/>
-  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps" Target="viewProps.xml"/>
-  <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>
-</Relationships>`);
-}
-
-function slideRelationshipsXml() {
-  return xmlDocument(`\
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-</Relationships>`);
-}
-
-function slideLayoutRelationshipsXml() {
-  return xmlDocument(`\
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
-</Relationships>`);
-}
-
-function slideMasterRelationshipsXml() {
-  return xmlDocument(`\
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
-</Relationships>`);
-}
-
-function presentationXml() {
-  return xmlDocument(`\
-<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId2"/></p:sldMasterIdLst>
-  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
-  <p:sldSz cx="${slideWidthEmu}" cy="${slideHeightEmu}" type="wide"/>
-  <p:notesSz cx="6858000" cy="9144000"/>
-  ${defaultTextStyleXml()}
-</p:presentation>`);
-}
-
-function presentationPropertiesXml() {
-  return xmlDocument(`\
-<p:presentationPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:showPr>
-    <p:present/>
-    <p:sldAll/>
-    <p:penClr><a:srgbClr val="FF0000"/></p:penClr>
-  </p:showPr>
-</p:presentationPr>`);
-}
-
-function viewPropertiesXml() {
-  return xmlDocument(`\
-<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:normalViewPr>
-    <p:restoredLeft sz="15620"/>
-    <p:restoredTop sz="94660"/>
-  </p:normalViewPr>
-  <p:slideViewPr>
-    <p:cSldViewPr>
-      <p:cViewPr varScale="1">
-        <p:scale><a:sx n="100" d="100"/><a:sy n="100" d="100"/></p:scale>
-        <p:origin x="0" y="0"/>
-      </p:cViewPr>
-      <p:guideLst/>
-    </p:cSldViewPr>
-  </p:slideViewPr>
-  <p:notesTextViewPr>
-    <p:cViewPr>
-      <p:scale><a:sx n="100" d="100"/><a:sy n="100" d="100"/></p:scale>
-      <p:origin x="0" y="0"/>
-    </p:cViewPr>
-  </p:notesTextViewPr>
-  <p:gridSpacing cx="72008" cy="72008"/>
-</p:viewPr>`);
-}
-
-function tableStylesXml() {
-  return xmlDocument(`\
-<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`);
-}
-
-function slideLayoutXml() {
-  return xmlDocument(`\
-<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank" preserve="1">
-  <p:cSld name="Blank">
-    <p:spTree>
-      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
-    </p:spTree>
-  </p:cSld>
-  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
-</p:sldLayout>`);
-}
-
-function slideMasterXml() {
-  return xmlDocument(`\
-<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:cSld>
-    <p:spTree>
-      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
-    </p:spTree>
-  </p:cSld>
-  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
-  <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
-  ${masterTextStylesXml()}
-</p:sldMaster>`);
-}
-
-function defaultTextStyleXml() {
-  return `\
-<p:defaultTextStyle>
-  ${textListStyleBody(1800)}
-</p:defaultTextStyle>`;
-}
-
-function masterTextStylesXml() {
-  return `\
-<p:txStyles>
-  <p:titleStyle>
-    ${textListStyleBody(4400)}
-  </p:titleStyle>
-  <p:bodyStyle>
-    ${textListStyleBody(3200)}
-  </p:bodyStyle>
-  <p:otherStyle>
-    ${textListStyleBody(1800)}
-  </p:otherStyle>
-</p:txStyles>`;
-}
-
-function textListStyleBody(fontSize) {
-  return `\
-<a:defPPr>
-  <a:defRPr lang="ja-JP" sz="${fontSize}">
-    <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
-    <a:latin typeface="+mn-lt"/>
-    <a:ea typeface="+mn-ea"/>
-    <a:cs typeface="+mn-cs"/>
-  </a:defRPr>
-</a:defPPr>
-<a:lvl1pPr marL="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="base" latinLnBrk="0" hangingPunct="1">
-  <a:defRPr lang="ja-JP" sz="${fontSize}">
-    <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
-    <a:latin typeface="+mn-lt"/>
-    <a:ea typeface="+mn-ea"/>
-    <a:cs typeface="+mn-cs"/>
-  </a:defRPr>
-</a:lvl1pPr>`;
-}
-
-function themeXml() {
-  return xmlDocument(`\
-<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Workflow">
-  <a:themeElements>
-    <a:clrScheme name="Workflow">
-      <a:dk1><a:srgbClr val="1F2937"/></a:dk1>
-      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
-      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
-      <a:lt2><a:srgbClr val="E3E7EE"/></a:lt2>
-      <a:accent1><a:srgbClr val="1F4E79"/></a:accent1>
-      <a:accent2><a:srgbClr val="595959"/></a:accent2>
-      <a:accent3><a:srgbClr val="D8DDE6"/></a:accent3>
-      <a:accent4><a:srgbClr val="6F7F95"/></a:accent4>
-      <a:accent5><a:srgbClr val="D7D7D7"/></a:accent5>
-      <a:accent6><a:srgbClr val="262626"/></a:accent6>
-      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
-      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
-    </a:clrScheme>
-    <a:fontScheme name="Workflow">
-      <a:majorFont><a:latin typeface="Yu Gothic"/><a:ea typeface="Yu Gothic"/><a:cs typeface="Yu Gothic"/></a:majorFont>
-      <a:minorFont><a:latin typeface="Yu Gothic"/><a:ea typeface="Yu Gothic"/><a:cs typeface="Yu Gothic"/></a:minorFont>
-    </a:fontScheme>
-    <a:fmtScheme name="Workflow">
-      <a:fillStyleLst>
-        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
-        <a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:schemeClr val="phClr"/></a:gs><a:gs pos="100000"><a:schemeClr val="phClr"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="0"/></a:gradFill>
-        <a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:schemeClr val="phClr"/></a:gs><a:gs pos="100000"><a:schemeClr val="phClr"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="0"/></a:gradFill>
-      </a:fillStyleLst>
-      <a:lnStyleLst>
-        <a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>
-        <a:ln w="25400" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>
-        <a:ln w="38100" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>
-      </a:lnStyleLst>
-      <a:effectStyleLst>
-        <a:effectStyle><a:effectLst/></a:effectStyle>
-        <a:effectStyle><a:effectLst/></a:effectStyle>
-        <a:effectStyle><a:effectLst/></a:effectStyle>
-      </a:effectStyleLst>
-      <a:bgFillStyleLst>
-        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
-        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
-        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
-      </a:bgFillStyleLst>
-    </a:fmtScheme>
-  </a:themeElements>
-  <a:objectDefaults/>
-  <a:extraClrSchemeLst/>
-</a:theme>`);
-}
-
-function appPropertiesXml() {
-  return xmlDocument(`\
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-  <Application>Timeline Workflow Generator</Application>
-  <PresentationFormat>On-screen Show (16:9)</PresentationFormat>
-  <Slides>1</Slides>
-</Properties>`);
-}
-
-function corePropertiesXml() {
-  return xmlDocument(`\
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <dc:title>Workflow</dc:title>
-  <dc:creator>Timeline Workflow Generator</dc:creator>
-  <cp:lastModifiedBy>Timeline Workflow Generator</cp:lastModifiedBy>
-</cp:coreProperties>`);
 }
 
 function xmlDocument(xml) {
