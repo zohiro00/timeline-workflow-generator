@@ -354,13 +354,15 @@ test("engine export menu lives in the preview toolbar and closes accessibly", as
 test("engine export menu downloads svg, png, and pptx files", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const exportToggle = page.locator("#export-menu-toggle");
+  const timestampedFilenamePattern = /^workflow-\d{8}-\d{6}-\d{3}\.(svg|png|pptx)$/;
 
   await exportToggle.click();
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("menuitem", { name: "SVGでダウンロード" }).click(),
   ]);
-  assert.equal(svgDownload.suggestedFilename(), "workflow.svg");
+  assert.match(svgDownload.suggestedFilename(), timestampedFilenamePattern);
+  assert.equal(svgDownload.suggestedFilename().endsWith(".svg"), true);
   assert.equal(await page.locator("#export-menu-list").isHidden(), true);
 
   await exportToggle.click();
@@ -368,7 +370,8 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
     page.waitForEvent("download"),
     page.getByRole("menuitem", { name: "PNGでダウンロード" }).click(),
   ]);
-  assert.equal(pngDownload.suggestedFilename(), "workflow.png");
+  assert.match(pngDownload.suggestedFilename(), timestampedFilenamePattern);
+  assert.equal(pngDownload.suggestedFilename().endsWith(".png"), true);
   assert.equal(await pngDownload.failure(), null);
   assert.equal(await page.locator("#status-summary").textContent(), "PNG downloaded");
 
@@ -377,7 +380,8 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
     page.waitForEvent("download"),
     page.getByRole("menuitem", { name: "PPTXでダウンロード" }).click(),
   ]);
-  assert.equal(pptxDownload.suggestedFilename(), "workflow.pptx");
+  assert.match(pptxDownload.suggestedFilename(), timestampedFilenamePattern);
+  assert.equal(pptxDownload.suggestedFilename().endsWith(".pptx"), true);
   assert.equal(await pptxDownload.failure(), null);
   assert.equal(await page.locator("#status-summary").textContent(), "PPTX downloaded");
 

@@ -15,6 +15,11 @@ const paneResizeConfig = Object.freeze({
   },
 });
 
+const exportFilenameConfig = Object.freeze({
+  baseName: "workflow",
+  timestampProvider: () => new Date(),
+});
+
 const settingsSchema = [
   {
     id: "style",
@@ -957,7 +962,7 @@ function mountEngine() {
   function downloadSvg() {
     if (!currentSvg) return;
     const blob = new Blob([currentSvg], { type: "image/svg+xml" });
-    downloadBlob(blob, "workflow.svg");
+    downloadBlob(blob, createExportFilename("svg"));
     closeExportMenu();
   }
 
@@ -965,7 +970,7 @@ function mountEngine() {
     if (!currentSvg) return;
     try {
       const blob = await createPngBlobFromSvg(currentSvg);
-      downloadBlob(blob, "workflow.png");
+      downloadBlob(blob, createExportFilename("png"));
       statusSummary.textContent = "PNG downloaded";
     } catch (error) {
       showExportError(error);
@@ -999,7 +1004,7 @@ function mountEngine() {
     try {
       const { createWorkflowPptxBlob } = await import("./workflow-pptx.js");
       const blob = createWorkflowPptxBlob(currentWorkflow, pickWorkflowOptions());
-      downloadBlob(blob, "workflow.pptx");
+      downloadBlob(blob, createExportFilename("pptx"));
       statusSummary.textContent = "PPTX downloaded";
     } catch (error) {
       showExportError(error);
@@ -1021,6 +1026,28 @@ function mountEngine() {
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  function createExportFilename(extension, config = exportFilenameConfig) {
+    const timestamp = formatLocalTimestamp(config.timestampProvider());
+    return `${config.baseName}-${timestamp}.${extension}`;
+  }
+
+  function formatLocalTimestamp(date) {
+    const parts = [
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds(),
+    ];
+    const [year, month, day, hour, minute, second, millisecond] = parts.map((part, index) => (
+      String(part).padStart(index === 6 ? 3 : 2, "0")
+    ));
+
+    return `${year}${month}${day}-${hour}${minute}${second}-${millisecond}`;
   }
 
   function createPngBlobFromSvg(svgText) {
