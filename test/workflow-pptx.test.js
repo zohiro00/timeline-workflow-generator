@@ -51,6 +51,16 @@ test("writes PowerPoint connector shapes bound to node shape ids", () => {
   assert.match(slide, /<a:prstDash val="dash"\/>/);
 });
 
+test("writes complete theme style lists for PowerPoint repair-free loading", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample));
+  const theme = createWorkflowPptxFiles(workflow)["ppt/theme/theme1.xml"];
+
+  assert.equal(countElements(theme, "a:fillStyleLst", "a:solidFill|a:gradFill"), 3);
+  assert.equal(countElements(theme, "a:lnStyleLst", "a:ln"), 3);
+  assert.equal(countElements(theme, "a:effectStyleLst", "a:effectStyle"), 3);
+  assert.equal(countElements(theme, "a:bgFillStyleLst", "a:solidFill|a:gradFill|a:blipFill"), 3);
+});
+
 function shapeId(slideXml, name) {
   const match = slideXml.match(new RegExp(`<p:cNvPr id="(\\d+)" name="${name}"\\/>`));
   assert.ok(match, `expected shape named ${name}`);
@@ -59,4 +69,10 @@ function shapeId(slideXml, name) {
 
 function connectionPattern(fromId, toId) {
   return new RegExp(`<a:stCxn id="${fromId}" idx="3"\\/>\\s*<a:endCxn id="${toId}" idx="1"\\/>`);
+}
+
+function countElements(xml, parentTag, childTagPattern) {
+  const parent = xml.match(new RegExp(`<${parentTag}>[\\s\\S]*?<\\/${parentTag}>`));
+  assert.ok(parent, `expected ${parentTag}`);
+  return (parent[0].match(new RegExp(`<(${childTagPattern})(\\s|>)`, "g")) ?? []).length;
 }
