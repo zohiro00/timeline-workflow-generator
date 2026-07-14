@@ -163,15 +163,15 @@ function renderTopPage() {
         <section class="hero">
           <div class="hero-badge">
             <span class="badge-dot"></span>
-            Markdown workflow to timeline SVG
+            Markdown to editable PowerPoint
           </div>
           <h1 class="hero-title">
-            <span class="hero-title-lead">Markdownから、資料に貼れる</span><br>
+            <span class="hero-title-lead"><span class="no-break">Markdownから、</span><wbr><span class="no-break">PowerPointで</span><wbr><span class="no-break">編集できる</span></span><br>
             <span class="hero-title-accent no-break">時系列ワークフロー図</span><wbr><span class="hero-title-tail no-break">を自動生成</span>
           </h1>
           <p class="hero-sub">
-            lanes / nodes / workflow に業務の流れを書くだけで、レーン、時系列、依存関係を読み取り、
-            PowerPointに貼りやすいSVGとして整えます。
+            <span class="no-break">lanes / nodes / workflow</span> に<wbr><span class="no-break">業務の流れを</span><wbr><span class="no-break">書くだけで、</span><wbr><span class="no-break">レーン、時系列、</span><wbr><span class="no-break">依存関係を自動整列。</span>
+            <span class="no-break">図形とコネクタを</span><wbr><span class="no-break">編集できるPPTXのほか、</span><wbr><span class="no-break">SVG / PNG / 画像コピーで</span><wbr><span class="no-break">出力できます。</span>
           </p>
           <a class="hero-cta" href="/engine">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
@@ -195,7 +195,7 @@ function renderTopPage() {
             </div>
             <div class="demo-arrow">→</div>
             <div class="demo-block demo-output">
-              <div class="block-label">Output</div>
+              <div class="block-label">Preview</div>
               <svg class="mini-timeline" viewBox="0 0 340 146" role="img" aria-label="レーン型タイムラインSVGの生成例">
                 <defs>
                   <marker id="mini-arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
@@ -227,6 +227,12 @@ function renderTopPage() {
                 </g>
               </svg>
               <p class="output-caption">依存関係から時系列位置を自動整列</p>
+              <div class="output-formats" aria-label="出力形式">
+                <span class="output-format output-format-primary">Editable PPTX</span>
+                <span class="output-format">SVG</span>
+                <span class="output-format">PNG</span>
+                <span class="output-format">Copy image</span>
+              </div>
             </div>
           </div>
         </section>
@@ -245,7 +251,7 @@ function renderTopPage() {
           <h2 id="solution-title">流れをテキストで書けば、<span class="no-break">依存関係</span>から時系列を自動でそろえる</h2>
           <p>
             Timeline Workflow Generatorは、レーン、ノード、<span class="no-break">依存関係</span>をMarkdownで受け取り、
-            DAGレイアウトで横方向の時系列位置を計算します。図の座標を指定せずに、説明したい業務の順序に集中できます。
+            DAGレイアウトで横方向の時系列位置を計算します。座標を指定せずに図を整え、編集可能なPPTXへそのまま出力できます。
           </p>
         </section>
 
@@ -253,9 +259,9 @@ function renderTopPage() {
           <div class="section-kicker">Features</div>
           <h2 id="features-title">主な特徴</h2>
           <div class="features-grid">
-            ${featureCard("Markdownで管理", "文章の中に workflow ブロックを書くだけで、図の元データをテキストとして管理できます。")}
-            ${featureCard("時系列を自動整列", "依存関係を読み取り、ノードの横位置を自動でそろえます。")}
-            ${featureCard("資料で使いやすく出力", "SVG / PNG のダウンロードや画像コピーで、PowerPointへ貼り付けやすく出力できます。")}
+            ${featureCard("Markdownで素早く編集", "リスト継続、インデント、行移動の入力補助とサンプルで、ワークフローを素早く組み立てられます。")}
+            ${featureCard("プレビューで自動整列", "依存関係から時系列をそろえ、配色、間隔、時間ラベル、長いラベルの表示を調整できます。")}
+            ${featureCard("PowerPointで編集できるPPTX", "ノード図形と標準コネクタを編集できるPPTXを出力。SVG / PNG / 画像コピーにも対応します。")}
           </div>
         </section>
 
@@ -264,8 +270,8 @@ function renderTopPage() {
           <h2 id="steps-title">3ステップで作成</h2>
           <div class="steps-grid">
             ${stepCard("1", "Markdownを書く", "レーン、ノード、依存関係を workflow 記法で入力します。")}
-            ${stepCard("2", "プレビューで確認", "自動整列されたタイムラインを見ながら、表現を調整します。")}
-            ${stepCard("3", "資料へ出力", "完成した図をダウンロードまたは画像コピーして、資料へ貼り付けます。")}
+            ${stepCard("2", "プレビューで確認", "自動整列されたタイムラインを見ながら、配色や間隔、ラベル表示を調整します。")}
+            ${stepCard("3", "PPTX / SVG / PNGで出力", "PowerPointで編集するか、画像として資料へ貼り付けるかを用途に合わせて選べます。")}
           </div>
         </section>
 
@@ -283,7 +289,7 @@ function renderTopPage() {
           <div class="section-kicker">FAQ</div>
           <h2 id="faq-title">よくある不安</h2>
           <div class="faq-list">
-            ${faqItem("PowerPointで使えますか？", "SVG / PNG のダウンロードや画像コピーで、PowerPointなどの資料へ貼り付けやすい形式で扱えます。")}
+            ${faqItem("PowerPointで使えますか？", "PPTXで出力すると、ノード図形とコネクタをPowerPoint上で編集できます。SVG / PNG の貼り付けや画像コピーも選べます。")}
             ${faqItem("Markdown本文から抽出できますか？", "Markdown内の workflow コードブロック、または workflow 記法の本文を入力できます。")}
             ${faqItem("座標を手で調整する必要はありますか？", "横位置は依存関係から計算します。ユーザーが座標や余白を細かく指定する必要はありません。")}
             ${faqItem("登録なしで試せますか？", "登録フォームはありません。Engineを開いて、サンプルからすぐに試せます。")}
