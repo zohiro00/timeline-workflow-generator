@@ -150,6 +150,7 @@ svg {
   background: #fff3ed;
   font-family: var(--font-mono);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .badge-dot {
@@ -334,6 +335,33 @@ svg {
   font-size: 12px;
   font-weight: 800;
   text-align: center;
+}
+
+.output-formats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.output-format {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.output-format-primary {
+  border-color: rgba(210, 71, 38, 0.3);
+  color: var(--ppt-red);
+  background: #fff3ed;
 }
 
 .narrative-section,

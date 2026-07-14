@@ -23,12 +23,12 @@ test.after(async () => {
 test("top page output example communicates the generated output result", async () => {
   const page = await openTopPage({ width: 1280, height: 820 });
 
-  assert.match(await page.locator(".hero-badge").textContent(), /Markdown workflow to timeline SVG/);
-  assert.match(normalizeText(await page.locator(".hero-title").textContent()), /Markdownから、資料に貼れる時系列ワークフロー図を自動生成/);
+  assert.match(await page.locator(".hero-badge").textContent(), /Markdown to editable PowerPoint/);
+  assert.match(normalizeText(await page.locator(".hero-title").textContent()), /Markdownから、PowerPointで編集できる時系列ワークフロー図を自動生成/);
   assert.equal(await page.locator(".hero .hero-cta").getAttribute("href"), "/engine");
   assert.deepEqual(await page.locator(".demo-block .block-label").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Input",
-    "Output",
+    "Preview",
   ]);
   const demoLayout = await page.locator(".demo-flow").evaluate((flow) => {
     const [inputBlock, outputBlock] = flow.querySelectorAll(".demo-block");
@@ -70,6 +70,12 @@ test("top page output example communicates the generated output result", async (
   ]);
   assert.doesNotMatch(await page.locator(".mini-timeline").textContent(), /差戻|待機/);
   assert.equal(await page.locator(".mini-arrow").count(), 2);
+  assert.deepEqual(await page.locator(".output-format").evaluateAll((items) => items.map((item) => item.textContent.trim())), [
+    "Editable PPTX",
+    "SVG",
+    "PNG",
+    "Copy image",
+  ]);
 
   await page.close();
 });
@@ -90,14 +96,14 @@ test("top page follows the planned information architecture", async () => {
   assert.match(await page.locator("#problem-title").textContent(), /図形を動かすたびに/);
   assert.match(await page.locator("#solution-title").textContent(), /依存関係から時系列を自動でそろえる/);
   assert.deepEqual(await page.locator(".feature-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
-    "Markdownで管理",
-    "時系列を自動整列",
-    "資料で使いやすく出力",
+    "Markdownで素早く編集",
+    "プレビューで自動整列",
+    "PowerPointで編集できるPPTX",
   ]);
   assert.deepEqual(await page.locator(".step-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
     "Markdownを書く",
     "プレビューで確認",
-    "資料へ出力",
+    "PPTX / SVG / PNGで出力",
   ]);
   assert.deepEqual(await page.locator(".use-case-card h3").evaluateAll((items) => items.map((item) => item.textContent)), [
     "稟議・申請",
@@ -115,7 +121,7 @@ test("top page follows the planned information architecture", async () => {
   assert.equal(await page.getByText("利用者の声").count(), 0);
   assert.equal(await page.getByText("SVGを保存").count(), 0);
   assert.equal(await page.getByText("SVGとして保存").count(), 0);
-  assert.equal(await page.getByText("SVG / PNG のダウンロードや画像コピー").count(), 2);
+  assert.match(await page.locator(".faq-item").first().textContent(), /ノード図形とコネクタをPowerPoint上で編集/);
 
   await page.close();
 });
@@ -149,9 +155,19 @@ test("top page keeps Japanese key phrases from awkward line breaks", async () =>
 
 test("top page output example fits on narrow screens", async () => {
   const page = await openTopPage({ width: 360, height: 740 });
-  const overflow = await page.locator(".site-shell").evaluate((item) => item.scrollWidth - item.clientWidth);
+  const layout = await page.evaluate(() => {
+    const badge = document.querySelector(".hero-badge");
+    const protectedPhrases = [...document.querySelectorAll(".hero .no-break")];
+    return {
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      badgeWhiteSpace: getComputedStyle(badge).whiteSpace,
+      protectedPhrasesFit: protectedPhrases.every((item) => item.getBoundingClientRect().width <= item.parentElement.getBoundingClientRect().width + 1),
+    };
+  });
 
-  assert.ok(overflow <= 1);
+  assert.ok(layout.pageOverflow <= 1);
+  assert.equal(layout.badgeWhiteSpace, "nowrap");
+  assert.equal(layout.protectedPhrasesFit, true);
 
   await page.close();
 });
