@@ -16,6 +16,11 @@ export const captureScenarios = [
     waitFor: async (page) => {
       await page.locator("#preview svg").waitFor({ state: "visible" });
       await page.locator("#status.status.ok").waitFor({ state: "visible" });
+      await page.locator("#starter-callout-dismiss").click();
+      await page.locator("#editor-search-toggle").click();
+      await page.locator("#editor-search-input").fill("req");
+      await page.locator("#editor-replace-toggle").click();
+      await page.locator("#editor-replace-input").fill("requester");
     },
   },
 ];

@@ -1,5 +1,62 @@
 const indentUnit = "  ";
 
+export function findLiteralMatches(value, query) {
+  if (!query) return [];
+
+  const matches = [];
+  let start = 0;
+  while (start <= value.length - query.length) {
+    const index = value.indexOf(query, start);
+    if (index === -1) break;
+    matches.push(index);
+    start = index + query.length;
+  }
+  return matches;
+}
+
+export function replaceLiteralMatch(value, query, replacement, matchIndex) {
+  const matches = findLiteralMatches(value, query);
+  const start = matches[matchIndex];
+  if (start === undefined) return null;
+
+  const nextValue = `${value.slice(0, start)}${replacement}${value.slice(start + query.length)}`;
+  return {
+    value: nextValue,
+    selectionStart: start,
+    selectionEnd: start + replacement.length,
+  };
+}
+
+export function replaceAllLiteral(value, query, replacement) {
+  const count = findLiteralMatches(value, query).length;
+  return {
+    value: count === 0 ? value : value.split(query).join(replacement),
+    count,
+  };
+}
+
+export function formatWorkflowSource(value) {
+  let section = "";
+  const lines = value.replace(/\r\n?/g, "\n").split("\n").map((line) => {
+    let formatted = line.replace(/\s+$/u, "").replace(/^(\t+)/, (tabs) => indentUnit.repeat(tabs.length));
+    const heading = formatted.match(/^##\s*(lanes|nodes|workflow)\s*$/i);
+    if (heading) {
+      section = heading[1].toLowerCase();
+      return `## ${section}`;
+    }
+
+    if (/^#{1,6}\s/.test(formatted) || /^```/.test(formatted)) section = "";
+
+    formatted = formatted.replace(/^(\s*)-\s*/, "$1- ");
+    if (section === "workflow") {
+      formatted = formatted.replace(/\s*(-\.->|-->)\s*/g, " $1 ");
+    }
+    return formatted;
+  });
+
+  return lines.join("\n").replace(/^\n+|\n+$/g, "").replace(/\n{3,}/g, "\n\n");
+}
+
 export function continueMarkdownList(value, selectionStart, selectionEnd) {
   if (selectionStart !== selectionEnd) return null;
 

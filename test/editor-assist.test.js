@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { continueMarkdownList, indentMarkdownLines, moveSelectedLines } from "../src/editor-assist.js";
+import {
+  continueMarkdownList,
+  findLiteralMatches,
+  formatWorkflowSource,
+  indentMarkdownLines,
+  moveSelectedLines,
+  replaceAllLiteral,
+  replaceLiteralMatch,
+} from "../src/editor-assist.js";
 
 test("continues markdown list items with the same indentation", () => {
   const value = "## nodes\n- requester\n  - draft: 申請作成";
@@ -90,4 +98,42 @@ test("moves selected line blocks without crossing document edges", () => {
   });
   assert.equal(moveSelectedLines(value, 0, 1, "up"), null);
   assert.equal(moveSelectedLines(value, value.length, value.length, "down"), null);
+});
+
+test("finds non-overlapping literal matches without regular expressions", () => {
+  assert.deepEqual(findLiteralMatches("lane1 -> lane2 -> lane1", "lane1"), [0, 18]);
+  assert.deepEqual(findLiteralMatches("aaaa", "aa"), [0, 2]);
+  assert.deepEqual(findLiteralMatches("lane1", ""), []);
+});
+
+test("replaces one selected literal match", () => {
+  assert.deepEqual(replaceLiteralMatch("lane1 -> lane2 -> lane1", "lane1", "requester", 1), {
+    value: "lane1 -> lane2 -> requester",
+    selectionStart: 18,
+    selectionEnd: 27,
+  });
+  assert.equal(replaceLiteralMatch("lane1", "missing", "replacement", 0), null);
+});
+
+test("replaces every literal match and reports the replacement count", () => {
+  assert.deepEqual(replaceAllLiteral("lane1 -> lane2 -> lane1", "lane1", "requester"), {
+    value: "requester -> lane2 -> requester",
+    count: 2,
+  });
+  assert.deepEqual(replaceAllLiteral("lane1", "", "requester"), {
+    value: "lane1",
+    count: 0,
+  });
+});
+
+test("formats workflow whitespace and notation without changing labels", () => {
+  const source = `# 申請フロー  \n\n\n##   lanes\n-   req: 申請者\t\n## nodes\n- req\n\t-   draft: 申請 作成\n## workflow\n- draft-->done`;
+
+  assert.equal(formatWorkflowSource(source), `# 申請フロー\n\n## lanes\n- req: 申請者\n## nodes\n- req\n  - draft: 申請 作成\n## workflow\n- draft --> done`);
+});
+
+test("does not normalize arrows in prose after the workflow section", () => {
+  const source = "## workflow\n- draft-->done\n\n## Notes\n- `a-->b` は別の例";
+
+  assert.equal(formatWorkflowSource(source), "## workflow\n- draft --> done\n\n## Notes\n- `a-->b` は別の例");
 });
