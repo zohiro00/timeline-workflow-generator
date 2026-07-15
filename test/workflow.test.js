@@ -511,13 +511,13 @@ test("renders filled blue and gray outline themes", () => {
   const filledGraySvg = renderWorkflowSvg(workflow, { theme: "consulting-gray-fill" });
 
   assert.match(filledBlueSvg, /\.node rect \{ fill: #1f4e79; stroke: #1f4e79; stroke-width: 2; \}/);
-  assert.match(filledBlueSvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
+  assert.match(filledBlueSvg, /\.node text \{ fill: #ffffff; font-weight: 700;/);
   assert.match(graySvg, /fill="#595959"/);
   assert.match(graySvg, /\.edge \{ fill: none; stroke: #595959; stroke-width: 2\.4; \}/);
   assert.match(graySvg, /\.edge-cross-mark-background \{ fill: #ffffff; \}/);
   assert.match(graySvg, /\.node rect \{ fill: #ffffff; stroke: #595959; stroke-width: 2; \}/);
   assert.match(filledGraySvg, /\.node rect \{ fill: #595959; stroke: #595959; stroke-width: 2; \}/);
-  assert.match(filledGraySvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
+  assert.match(filledGraySvg, /\.node text \{ fill: #ffffff; font-weight: 700;/);
 });
 
 test("passes render options through generateWorkflowSvg", () => {

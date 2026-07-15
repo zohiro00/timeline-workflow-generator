@@ -585,6 +585,32 @@ test("engine label fit strategy updates the rendered svg", async () => {
   await page.close();
 });
 
+test("engine applies the calculated font size to multiline node labels", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const source = `# Multiline label fit
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: ABCDEFGHIJKL<br>MNOPQRSTUVWX
+  - b: Done
+
+## workflow
+- a -> b`;
+
+  await page.locator("#source").fill(source);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "Multiline label fit");
+
+  const nodeLabel = page.locator("#preview .node text").first();
+  assert.equal(await nodeLabel.getAttribute("font-size"), "12");
+  assert.equal(await nodeLabel.evaluate((element) => getComputedStyle(element).fontSize), "12px");
+  assert.equal(await nodeLabel.locator("tspan").count(), 2);
+
+  await page.close();
+});
+
 test("engine theme preset updates the rendered svg", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const themeControl = page.locator('[data-setting="themeHint"]');

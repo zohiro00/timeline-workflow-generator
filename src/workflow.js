@@ -500,7 +500,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     <style>
       svg { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .lane-line { stroke: ${theme.laneLine}; stroke-width: 1; }
-      .lane-label { fill: ${theme.laneLabel}; font-size: 14px; font-weight: 700; }
+      .lane-label { fill: ${theme.laneLabel}; font-weight: 700; }
       .time-line { stroke: ${theme.timeLine}; stroke-width: 1; stroke-dasharray: 4 8; }
       .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
       .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
@@ -508,7 +508,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .edge-cross-mark-background { fill: ${theme.background}; }
       .edge-cross-mark line { stroke: ${theme.edge}; stroke-width: 3.4; stroke-linecap: round; }
       .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
-      .node text { fill: ${theme.nodeText}; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+      .node text { fill: ${theme.nodeText}; font-weight: 700; text-anchor: middle; pointer-events: none; }
     </style>
   </defs>
   <text x="24" y="38" fill="${theme.title}" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
