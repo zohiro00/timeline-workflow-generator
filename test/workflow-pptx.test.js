@@ -68,6 +68,20 @@ test("writes PowerPoint connector shapes bound to node shape ids", () => {
   assert.match(slide, /<a:prstDash val="dash"\/>/);
 });
 
+test("styles only the highlighted PowerPoint node", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sample.replace("  - a: 開始", "  - a [highlight]: 開始")));
+  const slide = createWorkflowPptxFiles(workflow)["ppt/slides/slide1.xml"];
+  const highlightedShape = shapeXml(slide, "a");
+  const regularShape = shapeXml(slide, "b");
+
+  assert.match(highlightedShape, /<a:srgbClr val="FCECEC"\/>/);
+  assert.match(highlightedShape, /<a:srgbClr val="C65A5A"\/>/);
+  assert.match(highlightedShape, /<a:srgbClr val="4A2020"\/>/);
+  assert.doesNotMatch(regularShape, /FCECEC|C65A5A|4A2020/);
+  assert.match(regularShape, /<a:srgbClr val="1F4E79"\/>/);
+  assert.equal(nodeStrokeWidth(highlightedShape), nodeStrokeWidth(regularShape) * 2);
+});
+
 test("writes complete theme style lists for PowerPoint repair-free loading", () => {
   const workflow = layoutWorkflow(parseWorkflow(sample));
   const theme = createWorkflowPptxFiles(workflow)["ppt/theme/theme1.xml"];
@@ -235,6 +249,19 @@ test("keeps slide, notes, layout, master, and theme relationships complete", () 
 function shapeId(slideXml, name) {
   const match = slideXml.match(new RegExp(`<p:cNvPr id="(\\d+)" name="${name}"\\/>`));
   assert.ok(match, `expected shape named ${name}`);
+  return Number(match[1]);
+}
+
+function shapeXml(slideXml, name) {
+  const shape = Array.from(slideXml.matchAll(/<p:sp>[\s\S]*?<\/p:sp>/g), (match) => match[0])
+    .find((candidate) => new RegExp(`<p:cNvPr id="\\d+" name="${name}"\\/>`).test(candidate));
+  assert.ok(shape, `shape ${name} should exist`);
+  return shape;
+}
+
+function nodeStrokeWidth(shape) {
+  const match = shape.match(/<a:ln w="(\d+)">/);
+  assert.ok(match, "node stroke width should exist");
   return Number(match[1]);
 }
 
