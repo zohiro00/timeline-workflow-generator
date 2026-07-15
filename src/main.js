@@ -1,4 +1,12 @@
-import { continueMarkdownList, indentMarkdownLines, moveSelectedLines } from "./editor-assist.js";
+import {
+  continueMarkdownList,
+  findLiteralMatches,
+  formatWorkflowSource,
+  indentMarkdownLines,
+  moveSelectedLines,
+  replaceAllLiteral,
+  replaceLiteralMatch,
+} from "./editor-assist.js";
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
 import { sampleWorkflowSource, starterWorkflowCallout, starterWorkflowSource, workflowExamples } from "./sample-workflow.js";
 import "./styles.css";
@@ -401,6 +409,12 @@ function renderEnginePage() {
             <div class="pane-toolbar">
               <div class="breadcrumb">workspace <span>/</span> source.workflow</div>
               <div class="source-toolbar-actions">
+                <button id="format-source" class="icon-btn" type="button" aria-label="入力を整形" data-tooltip="Format document">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h12" /><path d="m17 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /></svg>
+                </button>
+                <button id="editor-search-toggle" class="icon-btn" type="button" aria-label="検索と置換" aria-controls="editor-search-panel" aria-expanded="false" data-tooltip="Find and replace">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+                </button>
                 <button id="format-sample" class="icon-btn" type="button" aria-label="${escapeHtml(starterWorkflowCallout.actionLabel)}" data-tooltip="${escapeHtml(starterWorkflowCallout.actionTooltip)}">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
                 </button>
@@ -413,6 +427,36 @@ function renderEnginePage() {
               </div>
             </div>
             <div class="editor-body">
+              <section id="editor-search-panel" class="editor-search-panel" aria-label="検索と置換" hidden>
+                <div class="editor-search-row">
+                  <button id="editor-replace-toggle" class="search-panel-btn replace-toggle" type="button" aria-label="置換欄を表示" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                  </button>
+                  <input id="editor-search-input" class="search-panel-input" type="text" aria-label="検索" placeholder="検索" autocomplete="off" />
+                  <output id="editor-search-count" class="editor-search-count" aria-live="polite">該当なし</output>
+                  <button id="editor-search-previous" class="search-panel-btn" type="button" aria-label="前の一致">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6" /></svg>
+                  </button>
+                  <button id="editor-search-next" class="search-panel-btn" type="button" aria-label="次の一致">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                  </button>
+                  <button id="editor-search-close" class="search-panel-btn" type="button" aria-label="検索を閉じる">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <div id="editor-replace-row" class="editor-search-row editor-replace-row" hidden>
+                  <span class="replace-row-spacer" aria-hidden="true"></span>
+                  <input id="editor-replace-input" class="search-panel-input" type="text" aria-label="置換" placeholder="置換" autocomplete="off" />
+                  <span class="replace-count-spacer" aria-hidden="true"></span>
+                  <button id="editor-replace-one" class="search-panel-btn" type="button" aria-label="現在の一致を置換">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M4 12h8M4 17h11" /><path d="m17 14 3 3-3 3M20 17h-6" /></svg>
+                  </button>
+                  <button id="editor-replace-all" class="search-panel-btn" type="button" aria-label="すべて置換">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M4 11h7M4 16h10" /><path d="m17 5 3 3-3 3M20 8h-6M17 13l3 3-3 3M20 16h-6" /></svg>
+                  </button>
+                  <span class="replace-close-spacer" aria-hidden="true"></span>
+                </div>
+              </section>
               <div id="gutter" class="gutter" aria-hidden="true"></div>
               <textarea id="source" class="code-input" spellcheck="false" aria-label="Markdown workflow"></textarea>
             </div>
@@ -543,6 +587,19 @@ function renderSetting(item) {
 
 function mountEngine() {
   const source = document.querySelector("#source");
+  const formatSource = document.querySelector("#format-source");
+  const editorSearchToggle = document.querySelector("#editor-search-toggle");
+  const editorSearchPanel = document.querySelector("#editor-search-panel");
+  const editorReplaceToggle = document.querySelector("#editor-replace-toggle");
+  const editorSearchInput = document.querySelector("#editor-search-input");
+  const editorReplaceInput = document.querySelector("#editor-replace-input");
+  const editorSearchCount = document.querySelector("#editor-search-count");
+  const editorSearchPrevious = document.querySelector("#editor-search-previous");
+  const editorSearchNext = document.querySelector("#editor-search-next");
+  const editorSearchClose = document.querySelector("#editor-search-close");
+  const editorReplaceRow = document.querySelector("#editor-replace-row");
+  const editorReplaceOne = document.querySelector("#editor-replace-one");
+  const editorReplaceAll = document.querySelector("#editor-replace-all");
   const gutter = document.querySelector("#gutter");
   const status = document.querySelector("#status");
   const statusSummary = document.querySelector("#status-summary");
@@ -575,15 +632,32 @@ function mountEngine() {
   let isStarterCalloutDismissed = false;
   let currentSvg = "";
   let currentWorkflow = null;
+  let editorSearchMatches = [];
+  let currentSearchMatch = 0;
   const scheduleRender = debounce(render, 240);
 
   source.value = sampleWorkflowSource;
   source.addEventListener("input", () => {
     updateGutter();
     syncStarterCallout();
+    refreshEditorSearch(false);
     if (settings.autoRender) scheduleRender();
   });
   source.addEventListener("keydown", handleEditorKeydown);
+  formatSource.addEventListener("click", formatEditorSource);
+  editorSearchToggle.addEventListener("click", toggleEditorSearch);
+  editorReplaceToggle.addEventListener("click", toggleEditorReplace);
+  editorSearchInput.addEventListener("input", () => {
+    currentSearchMatch = 0;
+    refreshEditorSearch(true);
+  });
+  editorSearchInput.addEventListener("keydown", handleEditorSearchKeydown);
+  editorReplaceInput.addEventListener("keydown", handleEditorSearchKeydown);
+  editorSearchPrevious.addEventListener("click", () => moveEditorSearch(-1));
+  editorSearchNext.addEventListener("click", () => moveEditorSearch(1));
+  editorSearchClose.addEventListener("click", closeEditorSearch);
+  editorReplaceOne.addEventListener("click", replaceCurrentEditorMatch);
+  editorReplaceAll.addEventListener("click", replaceAllEditorMatches);
   starterTemplateButton.addEventListener("click", () => {
     isStarterCalloutDismissed = true;
     source.value = starterWorkflowSource;
@@ -610,6 +684,16 @@ function mountEngine() {
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
   examplesToggle.addEventListener("click", toggleWorkflowExamples);
   document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      openEditorSearch();
+      return;
+    }
+    if (event.key === "Escape" && !editorSearchPanel.hidden) {
+      closeEditorSearch();
+      source.focus();
+      return;
+    }
     if (event.key === "Escape" && isExportMenuOpen()) {
       closeExportMenu();
       exportMenuToggle.focus();
@@ -670,6 +754,110 @@ function mountEngine() {
 
   function syncStarterCallout() {
     starterCallout.hidden = isStarterCalloutDismissed || source.value !== sampleWorkflowSource;
+  }
+
+  function openEditorSearch() {
+    editorSearchPanel.hidden = false;
+    editorSearchToggle.setAttribute("aria-expanded", "true");
+    refreshEditorSearch(false);
+    editorSearchInput.focus();
+    editorSearchInput.select();
+  }
+
+  function toggleEditorSearch() {
+    if (editorSearchPanel.hidden) {
+      openEditorSearch();
+      return;
+    }
+    closeEditorSearch();
+  }
+
+  function closeEditorSearch() {
+    editorSearchPanel.hidden = true;
+    editorSearchToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleEditorReplace() {
+    const expanded = editorReplaceRow.hidden;
+    editorReplaceRow.hidden = !expanded;
+    editorReplaceToggle.setAttribute("aria-expanded", String(expanded));
+    editorReplaceToggle.setAttribute("aria-label", expanded ? "置換欄を隠す" : "置換欄を表示");
+    editorReplaceToggle.classList.toggle("expanded", expanded);
+    if (expanded) editorReplaceInput.focus();
+  }
+
+  function handleEditorSearchKeydown(event) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    moveEditorSearch(event.shiftKey ? -1 : 1);
+  }
+
+  function refreshEditorSearch(selectMatch) {
+    editorSearchMatches = findLiteralMatches(source.value, editorSearchInput.value);
+    currentSearchMatch = Math.min(currentSearchMatch, Math.max(0, editorSearchMatches.length - 1));
+    editorSearchCount.textContent = editorSearchMatches.length === 0
+      ? "該当なし"
+      : `${currentSearchMatch + 1} / ${editorSearchMatches.length}`;
+    editorSearchPrevious.disabled = editorSearchMatches.length === 0;
+    editorSearchNext.disabled = editorSearchMatches.length === 0;
+    editorReplaceOne.disabled = editorSearchMatches.length === 0;
+    editorReplaceAll.disabled = editorSearchMatches.length === 0;
+    if (selectMatch && editorSearchMatches.length > 0) selectCurrentEditorMatch();
+  }
+
+  function moveEditorSearch(delta) {
+    if (editorSearchMatches.length === 0) return;
+    currentSearchMatch = (currentSearchMatch + delta + editorSearchMatches.length) % editorSearchMatches.length;
+    editorSearchCount.textContent = `${currentSearchMatch + 1} / ${editorSearchMatches.length}`;
+    selectCurrentEditorMatch();
+  }
+
+  function selectCurrentEditorMatch() {
+    const start = editorSearchMatches[currentSearchMatch];
+    source.setSelectionRange(start, start + editorSearchInput.value.length);
+  }
+
+  function replaceCurrentEditorMatch() {
+    const edit = replaceLiteralMatch(
+      source.value,
+      editorSearchInput.value,
+      editorReplaceInput.value,
+      currentSearchMatch,
+    );
+    if (!edit) return;
+
+    applyEditorValue(edit.value, edit.selectionStart, edit.selectionEnd);
+    refreshEditorSearch(false);
+    statusSummary.textContent = "1件置換しました";
+  }
+
+  function replaceAllEditorMatches() {
+    const edit = replaceAllLiteral(source.value, editorSearchInput.value, editorReplaceInput.value);
+    if (edit.count === 0) return;
+
+    applyEditorValue(edit.value, 0, 0);
+    currentSearchMatch = 0;
+    refreshEditorSearch(false);
+    statusSummary.textContent = `${edit.count}件置換しました`;
+  }
+
+  function formatEditorSource() {
+    const formatted = formatWorkflowSource(source.value);
+    const changed = formatted !== source.value;
+    if (changed) applyEditorValue(formatted, 0, 0);
+    statusSummary.textContent = changed ? "入力を整形しました" : "整形済みです";
+    source.focus();
+  }
+
+  function applyEditorValue(value, selectionStart, selectionEnd) {
+    source.focus();
+    source.setSelectionRange(0, source.value.length);
+    const appliedWithUndo = document.execCommand("insertText", false, value);
+    if (!appliedWithUndo) {
+      source.value = value;
+      source.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText", data: value }));
+    }
+    source.setSelectionRange(selectionStart, selectionEnd);
   }
 
   function handleEditorKeydown(event) {
