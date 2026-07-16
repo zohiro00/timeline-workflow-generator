@@ -36,6 +36,13 @@ pnpm test
 pnpm run build
 ```
 
+VS Code拡張のビルドとVSIX生成:
+
+```bash
+pnpm run vscode:build
+pnpm run vscode:package
+```
+
 ## Usage
 
 1. Engineを開く
@@ -87,10 +94,13 @@ pnpm run build
 - `src/workflow.js`: parser, DAG layout engine, SVG renderer
 - `src/main.js`: browser UI
 - `test/workflow.test.js`: parser/layout/rendering tests
+- `vscode-extension/`: Markdownライブプレビューを提供するVS Code拡張
 
-## Later
+## VS Code Extension
 
-VS Code拡張化を見据えて、コア処理はDOMに依存しない純粋なJavaScriptモジュールとして分離しています。
+`vscode-extension/` には、アクティブなMarkdown内の最初の `workflow` ブロックを表示する拡張機能があります。拡張はWeb版と同じ `src/workflow.js` をバンドルして利用し、専用のparser、layout、SVG rendererは持ちません。
+
+拡張の使い方と制約は [vscode-extension/README.md](vscode-extension/README.md) を参照してください。
 
 ## Cloudflare Workers への公開
 

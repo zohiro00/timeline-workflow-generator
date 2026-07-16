@@ -1,0 +1,11 @@
+.vscode-test.mjs
+.gitignore
+dist/**/*.map
+esbuild.js
+images/preview.png
+integration/**
+node_modules/**
+scripts/**
+src/**
+test/**
+timeline-workflow-preview-*.vsix

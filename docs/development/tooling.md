@@ -9,6 +9,9 @@
 - PPTXテンプレート再生成: `pnpm run pptx:template -- <blank.pptx>`
 - テスト: `pnpm test`
 - ビルド: `pnpm run build`
+- VS Code拡張ビルド: `pnpm run vscode:build`
+- VS Code Extension Hostテスト: `pnpm run vscode:test:integration`
+- VSIX生成: `pnpm run vscode:package`
 - 変更ゲート: `pnpm run guard:change`
 - Draft PR 作成の CLI fallback: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
 - Git hook 有効化: `pnpm run install:hooks`

@@ -1,0 +1,74 @@
+{
+  "name": "timeline-workflow-preview",
+  "displayName": "Timeline Workflow Preview",
+  "description": "Preview timeline workflow diagrams from workflow blocks in Markdown.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "zohiro00",
+  "license": "MIT",
+  "pricing": "Free",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "workflow",
+    "diagram",
+    "timeline",
+    "preview",
+    "svg"
+  ],
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zohiro00/timeline-workflow-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zohiro00/timeline-workflow-generator/issues"
+  },
+  "homepage": "https://timeline-workflow-generator.tomokiku0998.workers.dev/",
+  "extensionKind": [
+    "ui"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onCommand:timelineWorkflow.openPreview"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "timelineWorkflow.openPreview",
+        "title": "Timeline Workflow: Open Preview",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "timelineWorkflow.openPreview",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "assets:generate": "node scripts/generate-marketplace-images.js",
+    "test:integration": "vscode-test --config .vscode-test.mjs",
+    "package": "pnpm run build && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1"
+  }
+}
