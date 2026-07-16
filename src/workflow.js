@@ -1,3 +1,5 @@
+import { workflowNodeHighlight } from "./workflow-highlight.js";
+
 const EDGE_DEFINITIONS = [
   { token: "->", type: "solid", marker: "arrow" },
   { token: "-.->", type: "dotted", marker: "arrow", dotted: true },
@@ -117,6 +119,7 @@ export function parseWorkflow(input) {
   let title = "時系列ワークフロー";
   let currentSection = null;
   let currentNodeLaneId = null;
+  let highlightedNodeId = null;
   const seenSections = new Set();
 
   source.split(/\r?\n/).forEach((rawLine, index) => {
@@ -160,14 +163,34 @@ export function parseWorkflow(input) {
     }
 
     if (currentSection === "nodes") {
-      const nodeMatch = withoutComment.match(/^  -\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      const nodeMatch = withoutComment.match(/^  -\s+([A-Za-z0-9_-]+)(?:\s+\[([^\]]*)\])?\s*:\s*(.*)$/);
       if (nodeMatch) {
-        const [, id, rawLabel] = nodeMatch;
+        const [, id, rawAttribute, rawLabel] = nodeMatch;
         const label = rawLabel.trim();
         if (!currentNodeLaneId) throw new WorkflowError("ノードは所属レーンの配下に記述してください。", lineNo);
         if (!label) throw new WorkflowError("ノード名が空です。", lineNo);
         if (nodes.has(id)) throw new WorkflowError(`ノードID "${id}" が重複しています。`, lineNo);
-        nodes.set(id, { id, label, laneId: currentNodeLaneId, gridX: 0, gridY: 0 });
+        if (rawAttribute !== undefined && rawAttribute !== workflowNodeHighlight.attribute) {
+          throw new WorkflowError(
+            `ノード属性 "${rawAttribute}" は使用できません。現在使用できる属性は \`${workflowNodeHighlight.attribute}\` です。`,
+            lineNo,
+          );
+        }
+        if (rawAttribute === workflowNodeHighlight.attribute && highlightedNodeId !== null) {
+          throw new WorkflowError(
+            `\`${workflowNodeHighlight.attribute}\` は1つのワークフローにつき1ノードだけ指定できます。すでにノード "${highlightedNodeId}" が強調されています。`,
+            lineNo,
+          );
+        }
+        if (rawAttribute === workflowNodeHighlight.attribute) highlightedNodeId = id;
+        nodes.set(id, {
+          id,
+          label,
+          laneId: currentNodeLaneId,
+          ...(rawAttribute === workflowNodeHighlight.attribute ? { highlighted: true } : {}),
+          gridX: 0,
+          gridY: 0,
+        });
         return;
       }
 
@@ -483,8 +506,10 @@ export function renderWorkflowSvg(workflow, options = {}) {
       maxLines: 3,
       strategy: labelFitStrategy,
     });
+    const classes = ["node"];
+    if (node.highlighted) classes.push(workflowNodeHighlight.className);
     return `
-      <g class="node" transform="translate(${x}, ${y})">
+      <g class="${classes.join(" ")}" transform="translate(${x}, ${y})">
         <rect width="${config.nodeWidth}" height="${config.nodeHeight}" rx="8" />
         <text x="${config.nodeWidth / 2}" y="${config.nodeHeight / 2}" font-size="${label.fontSize}">${renderLabelTspans(label, config.nodeWidth / 2)}</text>
       </g>`;
@@ -500,7 +525,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     <style>
       svg { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .lane-line { stroke: ${theme.laneLine}; stroke-width: 1; }
-      .lane-label { fill: ${theme.laneLabel}; font-size: 14px; font-weight: 700; }
+      .lane-label { fill: ${theme.laneLabel}; font-weight: 700; }
       .time-line { stroke: ${theme.timeLine}; stroke-width: 1; stroke-dasharray: 4 8; }
       .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
       .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
@@ -508,7 +533,9 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .edge-cross-mark-background { fill: ${theme.background}; }
       .edge-cross-mark line { stroke: ${theme.edge}; stroke-width: 3.4; stroke-linecap: round; }
       .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
-      .node text { fill: ${theme.nodeText}; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+      .node text { fill: ${theme.nodeText}; font-weight: 700; text-anchor: middle; pointer-events: none; }
+      .${workflowNodeHighlight.className} rect { fill: ${workflowNodeHighlight.fill}; stroke: ${workflowNodeHighlight.stroke}; stroke-width: ${workflowNodeHighlight.strokeWidth}; }
+      .${workflowNodeHighlight.className} text { fill: ${workflowNodeHighlight.text}; }
     </style>
   </defs>
   <text x="24" y="38" fill="${theme.title}" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>

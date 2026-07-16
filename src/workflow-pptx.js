@@ -1,4 +1,5 @@
 import { createWorkflowRenderModel } from "./workflow.js";
+import { workflowNodeHighlight } from "./workflow-highlight.js";
 import { blankPptxTemplateFiles } from "./workflow-pptx-template.js";
 
 export const workflowPptxMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
@@ -89,6 +90,7 @@ function createSlideXml(model) {
   });
 
   model.nodes.forEach((node) => {
+    const highlightStyle = node.highlighted ? workflowNodeHighlight : null;
     shapes.push(nodeXml({
       id: nodeShapeIds.get(node.id),
       name: node.id,
@@ -98,9 +100,10 @@ function createSlideXml(model) {
       height: layout.size(node.height),
       textLines: node.label.lines,
       fontSize: layout.fontSize(node.label.fontSize),
-      fill: model.theme.nodeFill,
-      stroke: model.theme.nodeStroke,
-      textColor: model.theme.nodeText,
+      fill: highlightStyle?.fill ?? model.theme.nodeFill,
+      stroke: highlightStyle?.stroke ?? model.theme.nodeStroke,
+      strokeWidth: highlightStyle ? layout.size(highlightStyle.strokeWidth) : undefined,
+      textColor: highlightStyle?.text ?? model.theme.nodeText,
     }));
   });
 
@@ -204,7 +207,7 @@ function createSlideLayout(modelWidth, modelHeight) {
   };
 }
 
-function nodeXml({ id, name, x, y, width, height, textLines, fontSize, fill, stroke, textColor }) {
+function nodeXml({ id, name, x, y, width, height, textLines, fontSize, fill, stroke, strokeWidth, textColor }) {
   return `\
 <p:sp>
   <p:nvSpPr>
@@ -216,7 +219,7 @@ function nodeXml({ id, name, x, y, width, height, textLines, fontSize, fill, str
     <a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${width}" cy="${height}"/></a:xfrm>
     <a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom>
     ${fillXml(fill)}
-    <a:ln w="${Math.max(1, Math.round(width / 56))}">${solidFillXml(stroke)}</a:ln>
+    <a:ln w="${strokeWidth ?? Math.max(1, Math.round(width / 56))}">${solidFillXml(stroke)}</a:ln>
   </p:spPr>
   ${textBodyXml(textLines, fontSize, textColor, true, "ctr")}
 </p:sp>`;

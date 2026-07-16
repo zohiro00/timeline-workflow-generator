@@ -490,6 +490,52 @@ test("engine editor supports markdown assist shortcuts", async () => {
   await page.close();
 });
 
+test("engine editor searches and replaces literal text from a VS Code-style panel", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const editor = page.locator("#source");
+  const searchPanel = page.locator("#editor-search-panel");
+
+  await editor.fill("lane1 -> lane2 -> lane1");
+  await page.locator("#editor-search-toggle").click();
+  await expectLocatorVisible(searchPanel);
+  await page.locator("#editor-search-input").fill("lane1");
+  assert.equal(await page.locator("#editor-search-input").evaluate((item) => document.activeElement === item), true);
+  assert.equal(await page.locator("#editor-search-count").textContent(), "1 / 2");
+
+  await page.locator("#editor-search-next").click();
+  assert.equal(await page.locator("#editor-search-count").textContent(), "2 / 2");
+  await page.locator("#editor-replace-toggle").click();
+  await page.locator("#editor-replace-input").fill("requester");
+  await page.locator("#editor-replace-one").click();
+  assert.equal(await editor.inputValue(), "lane1 -> lane2 -> requester");
+  assert.equal(await page.locator("#editor-search-count").textContent(), "1 / 1");
+
+  await page.locator("#editor-replace-all").click();
+  assert.equal(await editor.inputValue(), "requester -> lane2 -> requester");
+  assert.equal(await page.locator("#editor-search-count").textContent(), "該当なし");
+  assert.equal(await page.locator("#status-summary").textContent(), "1件置換しました");
+
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+z" : "Control+z");
+  assert.equal(await editor.inputValue(), "lane1 -> lane2 -> requester");
+
+  await page.keyboard.press("Escape");
+  await expectLocatorHidden(searchPanel);
+  await page.close();
+});
+
+test("engine editor formats workflow text only when requested", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const editor = page.locator("#source");
+
+  await editor.fill("##   workflow\n- draft-->done  ");
+  assert.equal(await editor.inputValue(), "##   workflow\n- draft-->done  ");
+  await page.locator("#format-source").click();
+  assert.equal(await editor.inputValue(), "## workflow\n- draft --> done");
+  assert.equal(await page.locator("#status-summary").textContent(), "入力を整形しました");
+
+  await page.close();
+});
+
 test("engine workflow examples can be expanded and applied", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const examples = page.locator(".workflow-example");
@@ -581,6 +627,32 @@ test("engine label fit strategy updates the rendered svg", async () => {
   await labelFitControl.selectOption("shrink-first");
   await page.waitForFunction(() => document.querySelector("#preview .node text")?.getAttribute("font-size") === "12");
   assert.equal(await page.locator("#preview .node text").first().textContent(), "ABCDEFGHIJKL");
+
+  await page.close();
+});
+
+test("engine applies the calculated font size to multiline node labels", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const source = `# Multiline label fit
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: ABCDEFGHIJKL<br>MNOPQRSTUVWX
+  - b: Done
+
+## workflow
+- a -> b`;
+
+  await page.locator("#source").fill(source);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "Multiline label fit");
+
+  const nodeLabel = page.locator("#preview .node text").first();
+  assert.equal(await nodeLabel.getAttribute("font-size"), "12");
+  assert.equal(await nodeLabel.evaluate((element) => getComputedStyle(element).fontSize), "12px");
+  assert.equal(await nodeLabel.locator("tspan").count(), 2);
 
   await page.close();
 });

@@ -75,6 +75,83 @@ test("keeps markdown headings and %% comments distinct", () => {
   assert.deepEqual(workflow.edges, [{ from: "a", to: "b", type: "solid" }]);
 });
 
+test("parses a single node highlight without changing regular node data", () => {
+  const source = `# Highlight
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a [highlight]: Focus
+  - b: Next [highlight]
+
+## workflow
+- a -> b
+`;
+  const parsed = parseWorkflow(source);
+  const regularSource = source.replace(" [highlight]", "");
+  const regularLayout = layoutWorkflow(parseWorkflow(regularSource));
+  const highlightedLayout = layoutWorkflow(parsed);
+
+  assert.deepEqual(parsed.nodes[0], {
+    id: "a",
+    label: "Focus",
+    laneId: "main",
+    highlighted: true,
+    gridX: 0,
+    gridY: 0,
+  });
+  assert.deepEqual(parsed.nodes[1], {
+    id: "b",
+    label: "Next [highlight]",
+    laneId: "main",
+    gridX: 0,
+    gridY: 0,
+  });
+  assert.deepEqual(
+    highlightedLayout.nodes.map(({ id, gridX, gridY }) => ({ id, gridX, gridY })),
+    regularLayout.nodes.map(({ id, gridX, gridY }) => ({ id, gridX, gridY })),
+  );
+  assert.deepEqual(highlightedLayout.edges, regularLayout.edges);
+});
+
+test("rejects multiple or unknown node highlight attributes", () => {
+  assert.throws(
+    () => parseWorkflow(`# Multiple highlights
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a [highlight]: A
+  - b [highlight]: B
+
+## workflow
+- a -> b
+`),
+    /Line 9: `highlight` は1つのワークフローにつき1ノードだけ指定できます。すでにノード "a" が強調されています。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`# Unknown attribute
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a [focus]: A
+  - b: B
+
+## workflow
+- a -> b
+`),
+    /Line 8: ノード属性 "focus" は使用できません。現在使用できる属性は `highlight` です。/,
+  );
+});
+
 test("parses dotted line, cross, and invisible workflow edges", () => {
   const workflow = parseWorkflow(`# Edge types
 
@@ -483,6 +560,28 @@ test("uses consulting blue outline theme by default", () => {
   assert.doesNotMatch(svg, /#d24726/);
 });
 
+test("renders only the highlighted node with the isolated highlight style", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(`# Highlight render
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a [highlight]: Focus
+  - b: Next
+
+## workflow
+- a -> b
+`)), { theme: "consulting-blue-fill" });
+
+  assert.match(svg, /<g class="node node-highlighted" transform="translate\(140, 116\)">/);
+  assert.match(svg, /<g class="node" transform="translate\(328, 116\)">/);
+  assert.match(svg, /\.node-highlighted rect \{ fill: #fcecec; stroke: #c65a5a; stroke-width: 4; \}/);
+  assert.match(svg, /\.node-highlighted text \{ fill: #4a2020; \}/);
+  assert.match(svg, /\.node rect \{ fill: #1f4e79; stroke: #1f4e79; stroke-width: 2; \}/);
+});
+
 test("exports renderer defaults for UI settings", () => {
   assert.deepEqual(
     {
@@ -511,13 +610,20 @@ test("renders filled blue and gray outline themes", () => {
   const filledGraySvg = renderWorkflowSvg(workflow, { theme: "consulting-gray-fill" });
 
   assert.match(filledBlueSvg, /\.node rect \{ fill: #1f4e79; stroke: #1f4e79; stroke-width: 2; \}/);
-  assert.match(filledBlueSvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
+  assert.match(filledBlueSvg, /\.node text \{ fill: #ffffff;/);
   assert.match(graySvg, /fill="#595959"/);
   assert.match(graySvg, /\.edge \{ fill: none; stroke: #595959; stroke-width: 2\.4; \}/);
   assert.match(graySvg, /\.edge-cross-mark-background \{ fill: #ffffff; \}/);
   assert.match(graySvg, /\.node rect \{ fill: #ffffff; stroke: #595959; stroke-width: 2; \}/);
   assert.match(filledGraySvg, /\.node rect \{ fill: #595959; stroke: #595959; stroke-width: 2; \}/);
-  assert.match(filledGraySvg, /\.node text \{ fill: #ffffff; font-size: 14px;/);
+  assert.match(filledGraySvg, /\.node text \{ fill: #ffffff;/);
+});
+
+test("does not override calculated label font sizes in embedded CSS", () => {
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
+
+  assert.doesNotMatch(svg, /\.node text\s*\{[^}]*font-size:/);
+  assert.doesNotMatch(svg, /\.lane-label\s*\{[^}]*font-size:/);
 });
 
 test("passes render options through generateWorkflowSvg", () => {

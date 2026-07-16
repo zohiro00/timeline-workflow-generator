@@ -1281,10 +1281,117 @@ svg {
 }
 
 .editor-body {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   background: #fff;
+}
+
+.editor-search-panel {
+  position: absolute;
+  top: 5px;
+  right: 16px;
+  z-index: 70;
+  width: min(440px, calc(100% - 82px));
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-subtle);
+  box-shadow: 0 7px 22px rgba(60, 52, 45, 0.18);
+  font-family: var(--font-sans);
+}
+
+.editor-search-panel[hidden],
+.editor-replace-row[hidden] {
+  display: none;
+}
+
+.editor-search-row {
+  display: grid;
+  grid-template-columns: 24px minmax(110px, 1fr) 58px 24px 24px 24px;
+  gap: 3px;
+  align-items: center;
+}
+
+.editor-replace-row {
+  margin-top: 4px;
+}
+
+.search-panel-input {
+  min-width: 0;
+  height: 26px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  outline: none;
+  color: var(--text);
+  background: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.search-panel-input:focus {
+  border-color: var(--ppt-orange);
+  box-shadow: 0 0 0 1px var(--ppt-orange);
+}
+
+.editor-search-count {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-panel-btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.search-panel-btn:hover,
+.search-panel-btn:focus-visible {
+  color: var(--text);
+  background: #e7e3de;
+  outline: none;
+}
+
+.search-panel-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.search-panel-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.replace-toggle svg {
+  transition: transform 120ms ease;
+}
+
+.replace-toggle.expanded svg {
+  transform: rotate(90deg);
+}
+
+.replace-row-spacer,
+.replace-count-spacer,
+.replace-close-spacer {
+  min-width: 0;
 }
 
 .workflow-examples {
