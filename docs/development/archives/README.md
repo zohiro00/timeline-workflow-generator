@@ -19,6 +19,7 @@
 - [0005: Codex sandbox で UI テストを通常実行する](0005-codex-ui-test-sandbox.md)
 - [0006: Codex sandbox で Git メタデータ更新を通常実行する](0006-codex-git-metadata-sandbox.md)
 - [0007: 既存ブランチ再利用で PR 履歴に過去コミットを混ぜる](0007-pr-branch-history-contamination.md)
+- [0008: 古いコミット由来の VSIX を公開候補に残す](0008-vscode-release-artifact-drift.md)
 
 ## 書き方
 

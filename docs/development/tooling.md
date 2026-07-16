@@ -12,6 +12,7 @@
 - VS Code拡張ビルド: `pnpm run vscode:build`
 - VS Code Extension Hostテスト: `pnpm run vscode:test:integration`
 - VSIX生成: `pnpm run vscode:package`
+- VS Code拡張の公開: [VS Code拡張の公開手順](vscode-extension-release.md)
 - 変更ゲート: `pnpm run guard:change`
 - Draft PR 作成の CLI fallback: `pnpm run pr:create -- --title "<PR title>" --body-file <body.md>`
 - Git hook 有効化: `pnpm run install:hooks`
