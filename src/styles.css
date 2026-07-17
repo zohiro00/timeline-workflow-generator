@@ -207,6 +207,49 @@ svg {
   text-decoration: none;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.hero-actions .hero-cta {
+  margin-top: 0;
+}
+
+.hero-marketplace-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--ppt-red);
+  background: var(--bg-panel);
+  font-size: 14px;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hero-marketplace-cta:hover {
+  border-color: var(--ppt-gold);
+  background: #fff3ed;
+}
+
+.hero-marketplace-cta svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .hero-cta:hover {
   background: var(--ppt-orange-hover);
 }
@@ -584,6 +627,12 @@ svg {
   color: var(--ppt-red);
   font-weight: 700;
   text-decoration: none;
+}
+
+.site-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .app-shell {
@@ -1687,6 +1736,10 @@ svg {
 
   .hero {
     padding: 48px 18px 44px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
   }
 
   .narrative-section,

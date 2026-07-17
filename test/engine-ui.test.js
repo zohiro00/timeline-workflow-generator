@@ -6,6 +6,7 @@ import test from "node:test";
 const host = "127.0.0.1";
 const port = Number(process.env.UI_TEST_PORT ?? 5183);
 const baseUrl = `http://${host}:${port}`;
+const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
 
 let devServer;
 let browser;
@@ -126,6 +127,25 @@ test("top page follows the planned information architecture", async () => {
   await page.close();
 });
 
+test("top page offers Marketplace access without replacing the Web Engine CTA", async () => {
+  const page = await openTopPage({ width: 1280, height: 820 });
+
+  assert.equal(await page.locator(".hero .hero-cta").getAttribute("href"), "/engine");
+
+  const heroMarketplaceLink = page.locator(".hero-marketplace-cta");
+  assert.equal(await heroMarketplaceLink.locator("span").textContent(), "VS Codeでライブプレビュー");
+  assert.equal(await heroMarketplaceLink.getAttribute("href"), vscodeMarketplaceUrl);
+  assert.equal(await heroMarketplaceLink.getAttribute("target"), "_blank");
+  assert.match(await heroMarketplaceLink.getAttribute("rel"), /noopener/);
+
+  const footerMarketplaceLink = page.locator(".site-footer a", { hasText: "VS Code拡張" });
+  assert.equal(await footerMarketplaceLink.getAttribute("href"), vscodeMarketplaceUrl);
+  assert.equal(await footerMarketplaceLink.getAttribute("target"), "_blank");
+  assert.match(await footerMarketplaceLink.getAttribute("rel"), /noopener/);
+
+  await page.close();
+});
+
 test("top page keeps Japanese key phrases from awkward line breaks", async () => {
   const page = await openTopPage({ width: 1280, height: 820 });
 
@@ -162,12 +182,14 @@ test("top page output example fits on narrow screens", async () => {
       pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       badgeWhiteSpace: getComputedStyle(badge).whiteSpace,
       protectedPhrasesFit: protectedPhrases.every((item) => item.getBoundingClientRect().width <= item.parentElement.getBoundingClientRect().width + 1),
+      marketplaceLinkVisible: document.querySelector(".hero-marketplace-cta")?.getBoundingClientRect().height > 0,
     };
   });
 
   assert.ok(layout.pageOverflow <= 1);
   assert.equal(layout.badgeWhiteSpace, "nowrap");
   assert.equal(layout.protectedPhrasesFit, true);
+  assert.equal(layout.marketplaceLinkVisible, true);
 
   await page.close();
 });
