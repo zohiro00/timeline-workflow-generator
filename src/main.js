@@ -12,6 +12,7 @@ import { sampleWorkflowSource, starterWorkflowCallout, starterWorkflowSource, wo
 import "./styles.css";
 
 const stackedWorkspaceQuery = "(max-width: 980px)";
+const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
 const paneResizeConfig = Object.freeze({
   desktop: {
     minSourceSize: 260,
@@ -181,10 +182,16 @@ function renderTopPage() {
             <span class="no-break">lanes / nodes / workflow</span> に<wbr><span class="no-break">業務の流れを</span><wbr><span class="no-break">書くだけで、</span><wbr><span class="no-break">レーン、時系列、</span><wbr><span class="no-break">依存関係を自動整列。</span>
             <span class="no-break">図形とコネクタを</span><wbr><span class="no-break">編集できるPPTXのほか、</span><wbr><span class="no-break">SVG / PNG / 画像コピーで</span><wbr><span class="no-break">出力できます。</span>
           </p>
-          <a class="hero-cta" href="/engine">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-            Engineを開く
-          </a>
+          <div class="hero-actions">
+            <a class="hero-cta" href="/engine">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+              Engineを開く
+            </a>
+            <a class="hero-marketplace-cta" href="${vscodeMarketplaceUrl}" target="_blank" rel="noopener">
+              <span>VS Codeでライブプレビュー</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5" /><path d="M19 5l-8 8" /><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+            </a>
+          </div>
 
           <div class="demo-flow" aria-label="Before and after example">
             <div class="demo-block">
@@ -316,7 +323,10 @@ function renderTopPage() {
 
       <footer class="site-footer">
         <span>Timeline Workflow Generator</span>
-        <a href="/engine">Engine</a>
+        <div class="site-footer-links">
+          <a href="/engine">Engine</a>
+          <a href="${vscodeMarketplaceUrl}" target="_blank" rel="noopener">VS Code拡張</a>
+        </div>
       </footer>
     </div>
   `;
