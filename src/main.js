@@ -12,6 +12,7 @@ import { sampleWorkflowSource, starterWorkflowCallout, starterWorkflowSource, wo
 import "./styles.css";
 
 const stackedWorkspaceQuery = "(max-width: 980px)";
+const mobileWorkflowExamplesQuery = "(max-width: 720px)";
 const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
 const paneResizeConfig = Object.freeze({
   desktop: {
@@ -636,6 +637,7 @@ function mountEngine() {
   const sourcePane = document.querySelector(".source-pane");
   const paneResizer = document.querySelector(".pane-resizer");
   const examplesToggle = document.querySelector("#examples-toggle");
+  const workflowExamplesPanel = examplesToggle.closest(".workflow-examples");
   const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
   const previewZoom = { scale: 1, mode: "fit" };
   let isPreviewMaximized = false;
@@ -646,6 +648,7 @@ function mountEngine() {
   let currentSearchMatch = 0;
   const scheduleRender = debounce(render, 240);
 
+  setWorkflowExamplesCollapsed(window.matchMedia(mobileWorkflowExamplesQuery).matches);
   source.value = sampleWorkflowSource;
   source.addEventListener("input", () => {
     updateGutter();
@@ -912,8 +915,11 @@ function mountEngine() {
   }
 
   function toggleWorkflowExamples() {
-    const panel = examplesToggle.closest(".workflow-examples");
-    const collapsed = panel.classList.toggle("collapsed");
+    setWorkflowExamplesCollapsed(!workflowExamplesPanel.classList.contains("collapsed"));
+  }
+
+  function setWorkflowExamplesCollapsed(collapsed) {
+    workflowExamplesPanel.classList.toggle("collapsed", collapsed);
     examplesToggle.setAttribute("aria-expanded", String(!collapsed));
   }
 

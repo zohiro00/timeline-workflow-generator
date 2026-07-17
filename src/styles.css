@@ -1790,4 +1790,12 @@ svg {
   .settings-sidebar {
     display: none;
   }
+
+  .source-pane {
+    overflow-y: auto;
+  }
+
+  .source-pane .editor-body {
+    flex: 0 0 220px;
+  }
 }
