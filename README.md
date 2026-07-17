@@ -100,7 +100,13 @@ pnpm run vscode:package
 
 `vscode-extension/` には、アクティブなMarkdown内の最初の `workflow` ブロックを表示する拡張機能があります。拡張はWeb版と同じ `src/workflow.js` をバンドルして利用し、専用のparser、layout、SVG rendererは持ちません。
 
-拡張の使い方と制約は [vscode-extension/README.md](vscode-extension/README.md) を参照してください。
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview)からインストールできます。
+
+```bash
+code --install-extension zohiro00.timeline-workflow-preview
+```
+
+拡張の使い方と制約は [vscode-extension/README.md](vscode-extension/README.md)、開発者向けの公開手順は [docs/development/vscode-extension-release.md](docs/development/vscode-extension-release.md) を参照してください。
 
 ## Cloudflare Workers への公開
 

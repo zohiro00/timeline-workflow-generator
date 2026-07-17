@@ -22,6 +22,7 @@
 - [開発コマンドと依存管理](docs/development/tooling.md)
 - [GitHub 操作方針](docs/development/github-workflow.md)
 - [UI と SVG の方針](docs/development/ui-svg.md)
+- [VS Code拡張の公開手順](docs/development/vscode-extension-release.md)
 - [失敗・反省・再発防止のアーカイブ](docs/development/archives/)
 
 ## 最低限の確認
