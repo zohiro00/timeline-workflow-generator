@@ -564,6 +564,8 @@ test("engine workflow examples can be expanded and applied", async () => {
   const toggle = page.locator("#examples-toggle");
 
   assert.equal(await examples.count(), 4);
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  await expectLocatorVisible(examples.first());
   await page.getByRole("button", { name: /購買申請/ }).click();
   assert.match(await page.locator("#source").inputValue(), /^# 購買申請ワークフロー/);
   await page.locator("#preview svg title").waitFor({ state: "attached" });
@@ -582,6 +584,34 @@ test("engine workflow examples can be expanded and applied", async () => {
   await toggle.click();
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");
   await expectLocatorVisible(examples.first());
+
+  await page.close();
+});
+
+test("engine editor and workflow examples do not overlap on mobile screens", async () => {
+  const page = await openEnginePage({ width: 390, height: 844 });
+  const editor = page.locator("#source");
+  const toggle = page.locator("#examples-toggle");
+  const exampleButtons = page.locator(".workflow-example");
+  const example = exampleButtons.first();
+  const examples = page.locator(".workflow-examples");
+
+  assert.equal(await exampleButtons.count(), 4);
+  assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+  await expectLocatorHidden(example);
+  await toggle.click();
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+
+  const editorBox = await editor.boundingBox();
+  const examplesBox = await examples.boundingBox();
+
+  assert.ok(editorBox.height >= 180);
+  assert.ok(editorBox.y + editorBox.height <= examplesBox.y + 1);
+  assert.equal(await page.locator(".source-pane").evaluate((pane) => pane.scrollHeight > pane.clientHeight), true);
+
+  await editor.fill("# mobile input\n\n## workflow");
+  assert.match(await editor.inputValue(), /^# mobile input/);
+  assert.ok((await example.boundingBox())?.height > 0);
 
   await page.close();
 });
