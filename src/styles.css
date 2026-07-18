@@ -2017,6 +2017,7 @@ html[lang="en"] .hero-title .no-break {
   }
 
   .app-shell {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 44px 1fr 24px;
   }
 
@@ -2025,14 +2026,14 @@ html[lang="en"] .hero-title .no-break {
   }
 
   .engine-body {
-    grid-template-columns: 44px 1fr;
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 
   .settings-sidebar {
     display: none;
   }
 
-  .engine-body.syntax-guide-open .settings-sidebar {
+  .engine-body:not(.sidebar-collapsed) .settings-sidebar {
     position: fixed;
     inset: 44px 0 24px 44px;
     z-index: 161;
@@ -2043,7 +2044,7 @@ html[lang="en"] .hero-title .no-break {
     background: var(--bg-soft);
   }
 
-  .engine-body.syntax-guide-open .syntax-guide-backdrop {
+  .engine-body:not(.sidebar-collapsed) .syntax-guide-backdrop {
     position: fixed;
     inset: 44px 0 24px;
     z-index: 160;
