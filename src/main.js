@@ -839,7 +839,9 @@ function mountEngine() {
   let currentSearchMatch = 0;
   const scheduleRender = debounce(render, 240);
 
-  setWorkflowExamplesCollapsed(window.matchMedia(mobileWorkflowExamplesQuery).matches);
+  const startsOnMobile = window.matchMedia(mobileWorkflowExamplesQuery).matches;
+  setWorkflowExamplesCollapsed(startsOnMobile);
+  if (startsOnMobile) closeSettingsSidebar(false);
   source.value = getSampleWorkflowSource(activeLocale);
   source.addEventListener("input", () => {
     updateGutter();
@@ -876,7 +878,10 @@ function mountEngine() {
   resetSettings.addEventListener("click", restoreDefaultSettings);
   syntaxGuideToggle.addEventListener("click", toggleSyntaxGuide);
   syntaxGuideClose.addEventListener("click", () => closeSyntaxGuide(true));
-  syntaxGuideBackdrop.addEventListener("click", () => closeSyntaxGuide(true));
+  syntaxGuideBackdrop.addEventListener("click", () => {
+    if (isSyntaxGuideOpen()) closeSyntaxGuide(true);
+    else closeSettingsSidebar(true);
+  });
   exportMenuToggle.addEventListener("click", toggleExportMenu);
   copyImage.addEventListener("click", copyPngImage);
   downloadPng.addEventListener("click", downloadPngImage);
@@ -898,6 +903,10 @@ function mountEngine() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isSyntaxGuideOpen()) {
       closeSyntaxGuide(true);
+      return;
+    }
+    if (event.key === "Escape" && isSettingsSidebarOpen() && window.matchMedia(mobileWorkflowExamplesQuery).matches) {
+      closeSettingsSidebar(true);
       return;
     }
     if (event.key === "Tab" && isSyntaxGuideOpen() && window.matchMedia(mobileWorkflowExamplesQuery).matches) {
@@ -1129,6 +1138,7 @@ function mountEngine() {
     const collapsed = engineBody.classList.toggle("sidebar-collapsed");
     settingsToggle.classList.toggle("active", !collapsed);
     settingsToggle.setAttribute("aria-expanded", String(!collapsed));
+    syncSyntaxGuidePresentation();
   }
 
   function showSettingsSidebar() {
@@ -1140,6 +1150,19 @@ function mountEngine() {
     syntaxGuideToggle.classList.remove("active");
     syntaxGuideToggle.setAttribute("aria-expanded", "false");
     syncSyntaxGuidePresentation();
+  }
+
+  function closeSettingsSidebar(restoreFocus) {
+    engineBody.classList.remove("syntax-guide-open");
+    engineBody.classList.add("sidebar-collapsed");
+    settingsPanelView.hidden = false;
+    syntaxGuide.hidden = true;
+    settingsToggle.classList.remove("active");
+    settingsToggle.setAttribute("aria-expanded", "false");
+    syntaxGuideToggle.classList.remove("active");
+    syntaxGuideToggle.setAttribute("aria-expanded", "false");
+    syncSyntaxGuidePresentation();
+    if (restoreFocus) settingsToggle.focus();
   }
 
   function toggleSyntaxGuide() {
@@ -1180,6 +1203,10 @@ function mountEngine() {
     return engineBody.classList.contains("syntax-guide-open");
   }
 
+  function isSettingsSidebarOpen() {
+    return !engineBody.classList.contains("sidebar-collapsed") && !isSyntaxGuideOpen();
+  }
+
   function syncSyntaxGuideLocale() {
     syntaxGuideReference.href = syntaxGuideReferenceUrls[activeLocale];
     if (isSyntaxGuideOpen()) settingsSidebar.setAttribute("aria-label", translate("記法ガイド", activeLocale));
@@ -1188,8 +1215,9 @@ function mountEngine() {
   function syncSyntaxGuidePresentation() {
     const mobile = window.matchMedia(mobileWorkflowExamplesQuery).matches;
     const open = isSyntaxGuideOpen();
-    syntaxGuideBackdrop.hidden = !open || !mobile;
-    if (open && mobile) {
+    const sidebarOpen = !engineBody.classList.contains("sidebar-collapsed");
+    syntaxGuideBackdrop.hidden = !sidebarOpen || !mobile;
+    if (sidebarOpen && mobile) {
       settingsSidebar.setAttribute("role", "dialog");
       settingsSidebar.setAttribute("aria-modal", "true");
     } else {

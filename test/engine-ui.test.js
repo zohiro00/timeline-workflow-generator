@@ -221,6 +221,34 @@ test("engine settings sidebar can be collapsed and reopened", async () => {
   await page.close();
 });
 
+test("engine settings open as an operable mobile overlay", async () => {
+  const page = await openEnginePage({ width: 390, height: 844 });
+  const sidebar = page.locator("#settings-sidebar");
+  const toggle = page.locator("#settings-toggle");
+  const themeControl = page.locator('[data-setting="themeHint"]');
+
+  assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+  await expectLocatorHidden(sidebar);
+
+  await toggle.click();
+  const box = await sidebar.boundingBox();
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(await sidebar.getAttribute("role"), "dialog");
+  assert.equal(await sidebar.getAttribute("aria-modal"), "true");
+  assert.ok(box.x >= 0);
+  assert.ok(box.x + box.width <= 390);
+
+  await themeControl.selectOption("consulting-gray-outline");
+  assert.equal(await page.locator("#theme-label").textContent(), "灰色 / 枠線");
+
+  await page.locator("#syntax-guide-backdrop").click({ position: { x: 2, y: 2 } });
+  await expectLocatorHidden(sidebar);
+  assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(await toggle.evaluate((element) => element === document.activeElement), true);
+
+  await page.close();
+});
+
 test("engine syntax guide explains every accepted connection without changing the workflow", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const source = page.locator("#source");
@@ -677,7 +705,7 @@ test("engine workflow examples can be expanded and applied", async () => {
   await page.close();
 });
 
-test("engine editor and workflow examples do not overlap on mobile screens", async () => {
+test("engine editor and workflow examples stay visible and tappable on mobile screens", async () => {
   const page = await openEnginePage({ width: 390, height: 844 });
   const editor = page.locator("#source");
   const toggle = page.locator("#examples-toggle");
@@ -693,14 +721,26 @@ test("engine editor and workflow examples do not overlap on mobile screens", asy
 
   const editorBox = await editor.boundingBox();
   const examplesBox = await examples.boundingBox();
+  const activityBox = await page.locator(".activity").boundingBox();
+  const exampleBoxes = await exampleButtons.evaluateAll((buttons) => buttons.map((button) => {
+    const box = button.getBoundingClientRect();
+    return { left: box.left, right: box.right };
+  }));
 
   assert.ok(editorBox.height >= 180);
   assert.ok(editorBox.y + editorBox.height <= examplesBox.y + 1);
+  assert.ok(activityBox.x >= 0);
+  assert.ok(examplesBox.x >= activityBox.x + activityBox.width);
+  assert.ok(examplesBox.x + examplesBox.width <= 390);
+  assert.equal(exampleBoxes.every((box) => box.left >= 0 && box.right <= 390), true);
   assert.equal(await page.locator(".source-pane").evaluate((pane) => pane.scrollHeight > pane.clientHeight), true);
 
   await editor.fill("# mobile input\n\n## workflow");
   assert.match(await editor.inputValue(), /^# mobile input/);
   assert.ok((await example.boundingBox())?.height > 0);
+
+  await page.getByRole("button", { name: /障害対応/ }).click();
+  assert.match(await editor.inputValue(), /^# 障害対応ワークフロー/);
 
   await page.close();
 });
