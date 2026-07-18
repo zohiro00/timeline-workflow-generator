@@ -12,6 +12,7 @@ const EDGE_TOKEN_PATTERN = new RegExp(`(${EDGE_DEFINITIONS.map((edge) => escapeR
 const EDGE_DEFINITIONS_BY_TOKEN = new Map(EDGE_DEFINITIONS.map((edge) => [edge.token, edge]));
 const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.type, edge]));
 const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
+export const workflowEdgeSyntax = Object.freeze(EDGE_DEFINITIONS.map(({ token, type }) => Object.freeze({ token, type })));
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
 const LABEL_FIT_STRATEGIES = new Set(["wrap-first", "shrink-first"]);
 const CROSS_MARK_SIZE = 20;

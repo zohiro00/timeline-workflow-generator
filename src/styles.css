@@ -897,6 +897,132 @@ html[lang="en"] .hero-title .no-break {
   background: var(--bg-soft);
 }
 
+.syntax-guide-backdrop {
+  display: none;
+}
+
+.syntax-guide {
+  min-height: 100%;
+}
+
+.syntax-guide-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-soft);
+}
+
+.syntax-guide-content {
+  padding: 0 14px 20px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.syntax-guide-intro,
+.syntax-guide-section p {
+  margin: 0;
+}
+
+.syntax-guide-section {
+  margin-top: 18px;
+}
+
+.syntax-guide-section h2 {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.syntax-guide-section code,
+.syntax-guide-edge code {
+  border-radius: 3px;
+  color: var(--text);
+  background: #e9e5df;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.syntax-guide-section code {
+  padding: 1px 4px;
+}
+
+.syntax-guide-basics {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.syntax-guide-basics div {
+  display: grid;
+  gap: 3px;
+}
+
+.syntax-guide-basics dt,
+.syntax-guide-basics dd {
+  margin: 0;
+}
+
+.syntax-guide-basics dd {
+  color: var(--muted);
+}
+
+.syntax-guide-note {
+  margin-top: 9px !important;
+  color: var(--muted);
+}
+
+.syntax-guide-edges {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.syntax-guide-edge {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  background: #fff;
+}
+
+.syntax-guide-edge code {
+  padding: 2px 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.syntax-guide-edge div {
+  display: grid;
+  gap: 1px;
+}
+
+.syntax-guide-edge strong {
+  font-size: 11px;
+}
+
+.syntax-guide-edge span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.syntax-guide-section > p + p {
+  margin-top: 8px;
+}
+
+.syntax-guide-reference {
+  display: inline-flex;
+  margin-top: 18px;
+  color: var(--ppt-red);
+  font-weight: 800;
+}
+
 .engine-body.sidebar-collapsed .settings-sidebar {
   overflow: hidden;
   border-right: 0;
@@ -1904,6 +2030,32 @@ html[lang="en"] .hero-title .no-break {
 
   .settings-sidebar {
     display: none;
+  }
+
+  .engine-body.syntax-guide-open .settings-sidebar {
+    position: fixed;
+    inset: 44px 0 24px 44px;
+    z-index: 161;
+    display: block;
+    width: auto;
+    visibility: visible;
+    border-right: 0;
+    background: var(--bg-soft);
+  }
+
+  .engine-body.syntax-guide-open .syntax-guide-backdrop {
+    position: fixed;
+    inset: 44px 0 24px;
+    z-index: 160;
+    display: block;
+    background: rgba(31, 41, 55, 0.32);
+  }
+
+  .syntax-guide-content {
+    max-width: 520px;
+    margin: 0 auto;
+    padding-right: 18px;
+    padding-left: 18px;
   }
 
   .source-pane {
