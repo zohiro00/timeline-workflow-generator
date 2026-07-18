@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createNoMarkdownState, createPreviewState } from "../src/preview-state.js";
+import { createVscodeLocalizer } from "../src/localization.js";
 
 const validBlock = `\`\`\`workflow
 # Purchase Approval
@@ -62,4 +63,25 @@ test("converts unexpected failures into a safe display state", () => {
   assert.equal(state.kind, "unexpected-error");
   assert.equal(state.heading, "予期しないエラーが発生しました");
   assert.equal(typeof state.message, "string");
+});
+
+test("creates English states and workflow errors for an English VS Code locale", () => {
+  const localizer = createVscodeLocalizer({
+    env: { language: "en-US" },
+    l10n: { t: (message) => message },
+  });
+  assert.equal(createNoMarkdownState(localizer).heading, "Open a Markdown file");
+  assert.equal(createPreviewState("plain Markdown", "README.md", localizer).heading, "No workflow block found");
+
+  const state = createPreviewState(`\`\`\`workflow
+## lanes
+- main: Main
+## nodes
+- main
+  - a: Start
+## workflow
+- a -> missing
+\`\`\``, "README.md", localizer);
+  assert.equal(state.heading, "Unable to display the workflow");
+  assert.match(state.message, /edge end node "missing" is not defined/);
 });

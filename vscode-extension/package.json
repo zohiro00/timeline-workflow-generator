@@ -1,8 +1,8 @@
 {
   "name": "timeline-workflow-preview",
-  "displayName": "Timeline Workflow Preview",
-  "description": "Preview timeline workflow diagrams from workflow blocks in Markdown.",
-  "version": "0.1.0",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "0.2.0",
   "private": true,
   "publisher": "zohiro00",
   "license": "MIT",
@@ -36,6 +36,7 @@
     "ui"
   ],
   "main": "./dist/extension.cjs",
+  "l10n": "./l10n",
   "activationEvents": [
     "onCommand:timelineWorkflow.openPreview"
   ],
@@ -43,7 +44,7 @@
     "commands": [
       {
         "command": "timelineWorkflow.openPreview",
-        "title": "Timeline Workflow: Open Preview",
+        "title": "%command.openPreview.title%",
         "icon": "$(open-preview)"
       }
     ],

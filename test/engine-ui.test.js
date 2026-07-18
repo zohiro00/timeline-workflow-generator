@@ -75,7 +75,7 @@ test("top page output example communicates the generated output result", async (
     "Editable PPTX",
     "SVG",
     "PNG",
-    "Copy image",
+    "画像をコピー",
   ]);
 
   await page.close();
@@ -194,6 +194,15 @@ test("top page output example fits on narrow screens", async () => {
   await page.close();
 });
 
+test("top page renders complete English copy without horizontal overflow", async () => {
+  const page = await openTopPage({ width: 390, height: 844 }, "en");
+  assert.doesNotMatch(await page.locator("main").textContent(), /[ぁ-んァ-ヶ一-龠々ー]/);
+  assert.match(normalizeText(await page.locator(".hero-title").textContent()), /TurnMarkdownintoaneditablePowerPoint/);
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+  await page.close();
+});
+
 test("engine settings sidebar can be collapsed and reopened", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
 
@@ -237,7 +246,7 @@ test("engine can hide timeline step labels from canvas settings", async () => {
 
   await page.locator('[data-group="canvas"] .settings-group-header').click();
   assert.equal(await timeLabelControl.isChecked(), true);
-  assert.equal(await page.locator("#preview svg .time-label").first().textContent(), "Step 1");
+  assert.equal(await page.locator("#preview svg .time-label").first().textContent(), "ステップ 1");
   assert.equal(await page.locator("#preview svg").evaluate((svg) => svg.textContent.includes("T0")), false);
 
   await timeLabelControl.uncheck();
@@ -345,7 +354,7 @@ test("engine keeps the last successful preview visible while showing input error
   await editor.fill(invalidSource);
   await page.locator("#status.status.error").waitFor({ state: "visible" });
   assert.match(await page.locator("#status").textContent(), /Line 6: レーンは `- laneId: レーン名` の形式で記述してください。/);
-  assert.equal(await page.locator("#status-summary").textContent(), "Preview not updated");
+  assert.equal(await page.locator("#status-summary").textContent(), "プレビューを更新できませんでした");
   assert.equal(await page.locator("#preview svg").count(), 1);
   assert.equal(await page.locator("#preview svg title").textContent(), "ワークフロー名");
   assert.equal(await staleNotice.textContent(), "入力にエラーがあります。前回成功時のプレビューを表示しています。");
@@ -354,7 +363,7 @@ test("engine keeps the last successful preview visible while showing input error
   await editor.fill(validSource);
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
   await staleNotice.waitFor({ state: "detached" });
-  assert.equal(await page.locator("#status-summary").textContent(), "Preview updated");
+  assert.equal(await page.locator("#status-summary").textContent(), "プレビューを更新しました");
   assert.equal(await exportToggle.isDisabled(), false);
 
   await page.close();
@@ -367,7 +376,7 @@ test("engine export menu lives in the preview toolbar and closes accessibly", as
 
   assert.equal(await page.locator(".activity #download-svg").count(), 0);
   assert.equal(await exportToggle.isDisabled(), false);
-  assert.equal((await exportToggle.textContent()).trim(), "Export");
+  assert.equal((await exportToggle.textContent()).trim(), "出力");
 
   await exportToggle.click();
   assert.equal(await exportToggle.getAttribute("aria-expanded"), "true");
@@ -411,7 +420,7 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
   assert.match(pngDownload.suggestedFilename(), timestampedFilenamePattern);
   assert.equal(pngDownload.suggestedFilename().endsWith(".png"), true);
   assert.equal(await pngDownload.failure(), null);
-  assert.equal(await page.locator("#status-summary").textContent(), "PNG downloaded");
+  assert.equal(await page.locator("#status-summary").textContent(), "PNGをダウンロードしました");
 
   await exportToggle.click();
   const [pptxDownload] = await Promise.all([
@@ -421,7 +430,7 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
   assert.match(pptxDownload.suggestedFilename(), timestampedFilenamePattern);
   assert.equal(pptxDownload.suggestedFilename().endsWith(".pptx"), true);
   assert.equal(await pptxDownload.failure(), null);
-  assert.equal(await page.locator("#status-summary").textContent(), "PPTX downloaded");
+  assert.equal(await page.locator("#status-summary").textContent(), "PPTXをダウンロードしました");
 
   await page.close();
 });
@@ -464,7 +473,7 @@ test("engine export menu copies the rendered png image", async () => {
     type: "image/png",
   });
   assert.ok(clipboardWrite.size > 0);
-  assert.equal(await page.locator("#status-summary").textContent(), "Image copied");
+  assert.equal(await page.locator("#status-summary").textContent(), "画像をコピーしました");
 
   await page.close();
 });
@@ -481,7 +490,7 @@ test("engine export menu reports unsupported image copy", async () => {
   await page.locator("#export-menu-toggle").click();
   await page.getByRole("menuitem", { name: "画像をコピー" }).click();
 
-  assert.equal(await page.locator("#status-summary").textContent(), "Export failed");
+  assert.equal(await page.locator("#status-summary").textContent(), "出力に失敗しました");
   assert.match(await page.locator("#status").textContent(), /画像コピーに対応していません/);
   assert.equal(await page.locator("#export-menu-list").isHidden(), true);
 
@@ -857,16 +866,87 @@ test("engine panes can be resized vertically on narrow screens", async () => {
   await page.close();
 });
 
-async function openEnginePage(viewport) {
+test("switches the Engine to English without replacing the current workflow", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const source = page.locator("#source");
+  const homeLink = page.locator(".titlebar-brand");
+  const customSource = `# My workflow
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - start: Start
+  - done: Done
+
+## workflow
+- start -> done`;
+  await source.fill(customSource);
+  assert.equal(await homeLink.getAttribute("href"), "/");
+  assert.equal(await homeLink.getAttribute("aria-label"), "トップへ");
+  assert.equal(await homeLink.getAttribute("title"), "トップへ");
+  assert.equal(await page.locator('.titlebar-nav > a[href="/"]').count(), 0);
+  await homeLink.focus();
+  assert.notEqual(await homeLink.evaluate((link) => getComputedStyle(link).outlineStyle), "none");
+  const localeToggle = page.locator(".locale-menu-toggle");
+  assert.equal(await localeToggle.getAttribute("aria-label"), "言語を変更");
+  assert.equal(await localeToggle.locator("svg").evaluate((icon) => getComputedStyle(icon).backgroundColor), "rgba(0, 0, 0, 0)");
+  await localeToggle.click();
+  const localeMenu = page.locator(".locale-menu-list");
+  assert.equal(await localeMenu.getAttribute("aria-label"), "言語を変更");
+  assert.equal(await localeToggle.getAttribute("aria-expanded"), "true");
+  assert.equal(await page.getByRole("menuitemradio", { name: "日本語" }).getAttribute("aria-checked"), "true");
+  await page.keyboard.press("Escape");
+  await expectLocatorHidden(localeMenu);
+
+  await localeToggle.click();
+  await page.getByRole("menuitemradio", { name: "English" }).click();
+
+  assert.equal(await source.inputValue(), customSource);
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.equal(await homeLink.getAttribute("aria-label"), "Home");
+  assert.equal(await homeLink.getAttribute("title"), "Home");
+  assert.equal(await localeToggle.getAttribute("aria-label"), "Change language");
+  assert.equal(await page.locator('[data-locale="en"]').getAttribute("aria-checked"), "true");
+  await expectLocatorHidden(localeMenu);
+  assert.equal((await page.locator("#export-menu-toggle").textContent()).trim(), "Export");
+  assert.equal(await page.locator("#preview svg .time-label").first().textContent(), "Step 1");
+  assert.equal(await page.evaluate(() => localStorage.getItem("timeline-workflow.locale")), "en");
+  await page.close();
+});
+
+test("language menu fits and remains tappable on mobile screens", async () => {
+  const page = await openEnginePage({ width: 390, height: 844 });
+  const localeToggle = page.getByRole("button", { name: "言語を変更" });
+  const box = await localeToggle.boundingBox();
+
+  assert.ok(box.height >= 34);
+  assert.ok(box.width >= 34);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+
+  await localeToggle.click();
+  const localeMenu = page.locator(".locale-menu-list");
+  const menuBox = await localeMenu.boundingBox();
+  assert.ok(menuBox.x >= 0);
+  assert.ok(menuBox.x + menuBox.width <= 390);
+  await page.getByRole("menuitemradio", { name: "English" }).click();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  await page.close();
+});
+
+async function openEnginePage(viewport, locale = "ja") {
   const page = await browser.newPage({ viewport });
+  await page.addInitScript((selectedLocale) => localStorage.setItem("timeline-workflow.locale", selectedLocale), locale);
   await page.goto(`${baseUrl}/engine`, { waitUntil: "domcontentloaded" });
   await page.locator("#preview svg").waitFor({ state: "visible" });
   await page.locator("#status.status.ok").waitFor({ state: "visible" });
   return page;
 }
 
-async function openTopPage(viewport) {
+async function openTopPage(viewport, locale = "ja") {
   const page = await browser.newPage({ viewport });
+  await page.addInitScript((selectedLocale) => localStorage.setItem("timeline-workflow.locale", selectedLocale), locale);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.locator(".demo-output").waitFor({ state: "visible" });
   return page;

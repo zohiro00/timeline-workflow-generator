@@ -1,0 +1,5 @@
+{
+  "displayName": "Timeline Workflow Preview",
+  "description": "Markdownのworkflowブロックから時系列ワークフロー図をプレビューします。",
+  "command.openPreview.title": "Timeline Workflow: プレビューを開く"
+}

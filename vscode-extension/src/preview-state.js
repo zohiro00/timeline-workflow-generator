@@ -5,50 +5,52 @@ import {
   renderWorkflowSvg,
   WorkflowError,
 } from "../../src/workflow.js";
+import { createDefaultLocalizer } from "./localization.js";
 
-export function createNoMarkdownState() {
+export function createNoMarkdownState(localizer = createDefaultLocalizer()) {
   return {
     kind: "no-markdown",
-    title: "Workflow Preview",
-    heading: "Markdownファイルを開いてください",
-    message: "アクティブなMarkdownファイルに含まれる workflow コードブロックをプレビューします。",
+    title: localizer.message("previewTitle"),
+    heading: localizer.message("openMarkdownHeading"),
+    message: localizer.message("openMarkdownMessage"),
   };
 }
 
-export function createPreviewState(markdown, documentName) {
-  const title = documentName ? `Workflow Preview — ${documentName}` : "Workflow Preview";
+export function createPreviewState(markdown, documentName, localizer = createDefaultLocalizer()) {
+  const previewTitle = localizer.message("previewTitle");
+  const title = documentName ? `${previewTitle} — ${documentName}` : previewTitle;
 
   try {
     if (extractWorkflowBlocks(markdown).length === 0) {
       return {
         kind: "no-workflow",
         title,
-        heading: "workflow ブロックが見つかりません",
-        message: "Markdownに ```workflow で始まるコードブロックを追加してください。",
+        heading: localizer.message("missingWorkflowHeading"),
+        message: localizer.message("missingWorkflowMessage"),
       };
     }
 
-    const workflow = layoutWorkflow(parseWorkflow(markdown));
+    const workflow = layoutWorkflow(parseWorkflow(markdown, { defaultTitle: localizer.workflowOptions.defaultTitle }));
     return {
       kind: "ready",
       title,
       documentName,
-      svg: renderWorkflowSvg(workflow),
+      svg: renderWorkflowSvg(workflow, { formatTimeLabel: localizer.workflowOptions.formatTimeLabel }),
     };
   } catch (error) {
     if (error instanceof WorkflowError) {
       return {
         kind: "workflow-error",
         title,
-        heading: "ワークフローを表示できません",
-        message: error.message,
+        heading: localizer.message("workflowErrorHeading"),
+        message: localizer.formatWorkflowError(error),
       };
     }
 
     return {
       kind: "unexpected-error",
       title,
-      heading: "予期しないエラーが発生しました",
+      heading: localizer.message("unexpectedErrorHeading"),
       message: error instanceof Error ? error.message : String(error),
     };
   }

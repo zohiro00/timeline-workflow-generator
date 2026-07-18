@@ -87,10 +87,12 @@ const workflowThemes = {
 };
 
 export class WorkflowError extends Error {
-  constructor(message, line = null) {
+  constructor(message, line = null, code = "workflow.unknown", params = {}) {
     super(line == null ? message : `Line ${line}: ${message}`);
     this.name = "WorkflowError";
     this.line = line;
+    this.code = code;
+    this.params = Object.freeze({ ...params });
   }
 }
 
@@ -108,7 +110,7 @@ export function extractWorkflowBlocks(markdown) {
   return blocks;
 }
 
-export function parseWorkflow(input) {
+export function parseWorkflow(input, options = {}) {
   const blocks = extractWorkflowBlocks(input);
   const source = blocks.length > 0 ? blocks[0].source : input.trim();
   const lineOffset = blocks.length > 0 ? blocks[0].startLine : 0;
@@ -116,7 +118,7 @@ export function parseWorkflow(input) {
   const laneSet = new Set();
   const nodes = new Map();
   const edges = [];
-  let title = "時系列ワークフロー";
+  let title = options.defaultTitle ?? "時系列ワークフロー";
   let currentSection = null;
   let currentNodeLaneId = null;
   let highlightedNodeId = null;
@@ -130,7 +132,7 @@ export function parseWorkflow(input) {
 
     if (trimmed.startsWith("# ")) {
       const nextTitle = trimmed.slice(2).trim();
-      if (!nextTitle) throw new WorkflowError("タイトルが空です。", lineNo);
+      if (!nextTitle) throw workflowError("タイトルが空です。", lineNo, "title.empty");
       title = nextTitle;
       return;
     }
@@ -138,7 +140,7 @@ export function parseWorkflow(input) {
     if (trimmed.startsWith("## ")) {
       const section = trimmed.slice(3).trim().toLowerCase();
       if (!WORKFLOW_SECTIONS.has(section)) {
-        throw new WorkflowError("セクションは `## lanes`、`## nodes`、`## workflow` のいずれかで記述してください。", lineNo);
+        throw workflowError("セクションは `## lanes`、`## nodes`、`## workflow` のいずれかで記述してください。", lineNo, "section.invalid");
       }
       currentSection = section;
       currentNodeLaneId = null;
@@ -147,16 +149,16 @@ export function parseWorkflow(input) {
     }
 
     if (!currentSection) {
-      throw new WorkflowError("`## lanes`、`## nodes`、`## workflow` のいずれかのセクション内に記述してください。", lineNo);
+      throw workflowError("`## lanes`、`## nodes`、`## workflow` のいずれかのセクション内に記述してください。", lineNo, "section.required-context");
     }
 
     if (currentSection === "lanes") {
       const match = trimmed.match(/^-\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-      if (!match) throw new WorkflowError("レーンは `- laneId: レーン名` の形式で記述してください。", lineNo);
+      if (!match) throw workflowError("レーンは `- laneId: レーン名` の形式で記述してください。", lineNo, "lane.syntax");
       const [, id, rawLabel] = match;
       const label = rawLabel.trim();
-      if (!label) throw new WorkflowError("レーン名が空です。", lineNo);
-      if (laneSet.has(id)) throw new WorkflowError(`レーンID "${id}" が重複しています。`, lineNo);
+      if (!label) throw workflowError("レーン名が空です。", lineNo, "lane.name-empty");
+      if (laneSet.has(id)) throw workflowError(`レーンID "${id}" が重複しています。`, lineNo, "lane.id-duplicate", { id });
       laneSet.add(id);
       lanes.push({ id, label });
       return;
@@ -167,19 +169,23 @@ export function parseWorkflow(input) {
       if (nodeMatch) {
         const [, id, rawAttribute, rawLabel] = nodeMatch;
         const label = rawLabel.trim();
-        if (!currentNodeLaneId) throw new WorkflowError("ノードは所属レーンの配下に記述してください。", lineNo);
-        if (!label) throw new WorkflowError("ノード名が空です。", lineNo);
-        if (nodes.has(id)) throw new WorkflowError(`ノードID "${id}" が重複しています。`, lineNo);
+        if (!currentNodeLaneId) throw workflowError("ノードは所属レーンの配下に記述してください。", lineNo, "node.lane-context");
+        if (!label) throw workflowError("ノード名が空です。", lineNo, "node.name-empty");
+        if (nodes.has(id)) throw workflowError(`ノードID "${id}" が重複しています。`, lineNo, "node.id-duplicate", { id });
         if (rawAttribute !== undefined && rawAttribute !== workflowNodeHighlight.attribute) {
-          throw new WorkflowError(
+          throw workflowError(
             `ノード属性 "${rawAttribute}" は使用できません。現在使用できる属性は \`${workflowNodeHighlight.attribute}\` です。`,
             lineNo,
+            "node.attribute-unsupported",
+            { attribute: rawAttribute, supported: workflowNodeHighlight.attribute },
           );
         }
         if (rawAttribute === workflowNodeHighlight.attribute && highlightedNodeId !== null) {
-          throw new WorkflowError(
+          throw workflowError(
             `\`${workflowNodeHighlight.attribute}\` は1つのワークフローにつき1ノードだけ指定できます。すでにノード "${highlightedNodeId}" が強調されています。`,
             lineNo,
+            "node.highlight-duplicate",
+            { attribute: workflowNodeHighlight.attribute, id: highlightedNodeId },
           );
         }
         if (rawAttribute === workflowNodeHighlight.attribute) highlightedNodeId = id;
@@ -201,17 +207,17 @@ export function parseWorkflow(input) {
         return;
       }
 
-      throw new WorkflowError("nodes は `- laneId` と、その配下の `  - nodeId: ノード名` の形式で記述してください。", lineNo);
+      throw workflowError("nodes は `- laneId` と、その配下の `  - nodeId: ノード名` の形式で記述してください。", lineNo, "nodes.syntax");
     }
 
     if (currentSection === "workflow") {
       const match = trimmed.match(/^-\s+(.+)$/);
-      if (!match) throw new WorkflowError("workflow は `- a -> b` の形式で記述してください。", lineNo);
+      if (!match) throw workflowError("workflow は `- a -> b` の形式で記述してください。", lineNo, "workflow.syntax");
       edges.push(...parseEdgeChain(match[1].trim(), lineNo));
       return;
     }
 
-    throw new WorkflowError("解釈できない行です。", lineNo);
+    throw workflowError("解釈できない行です。", lineNo, "line.unrecognized");
   });
 
   validateWorkflow({ lanes, nodes, edges, seenSections });
@@ -252,7 +258,7 @@ export function layoutWorkflow(workflow) {
   }
 
   if (ordered.length !== activeNodes.length) {
-    throw new WorkflowError("依存関係に循環があります。DAGになるように矢印を見直してください。");
+    throw workflowError("依存関係に循環があります。DAGになるように矢印を見直してください。", null, "graph.cycle");
   }
 
   for (const id of ordered) {
@@ -325,7 +331,9 @@ export function createWorkflowRenderModel(workflow, options = {}) {
       x,
       y1: config.paddingTop - 36,
       y2: timeLineEndY,
-      timeLabel: config.showTimeLabels ? `Step ${gridX + 1}` : "",
+      timeLabel: config.showTimeLabels
+        ? (config.formatTimeLabel?.(gridX + 1) ?? `Step ${gridX + 1}`)
+        : "",
       timeLabelY: config.paddingTop - 48,
     };
   });
@@ -459,7 +467,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     const x = config.paddingLeft + gridX * config.gridXSize + config.nodeWidth / 2;
     const timeLabel = config.showTimeLabels
       ? `
-      <text class="time-label" x="${x}" y="${config.paddingTop - 48}">Step ${gridX + 1}</text>`
+      <text class="time-label" x="${x}" y="${config.paddingTop - 48}">${escapeXml(config.formatTimeLabel?.(gridX + 1) ?? `Step ${gridX + 1}`)}</text>`
       : "";
     return `
       <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${timeLineEndY}" />${timeLabel}`;
@@ -516,14 +524,14 @@ export function renderWorkflowSvg(workflow, options = {}) {
   });
 
   return `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="workflow-title">
+<svg class="workflow-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="workflow-title">
   <title id="workflow-title">${escapeXml(workflow.title)}</title>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M 0 0 L 8 3 L 0 6 z" fill="${theme.edge}" />
     </marker>
     <style>
-      svg { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .workflow-diagram { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .lane-line { stroke: ${theme.laneLine}; stroke-width: 1; }
       .lane-label { fill: ${theme.laneLabel}; font-weight: 700; }
       .time-line { stroke: ${theme.timeLine}; stroke-width: 1; stroke-dasharray: 4 8; }
@@ -554,7 +562,7 @@ export function generateWorkflowSvg(input, options) {
 function parseEdgeChain(line, lineNo) {
   const tokens = line.split(EDGE_TOKEN_PATTERN).map((token) => token.trim()).filter(Boolean);
   if (tokens.length < 3 || tokens.length % 2 === 0) {
-    throw new WorkflowError(`依存関係は \`${EDGE_USAGE}\` の形式で記述してください。`, lineNo);
+    throw workflowError(`依存関係は \`${EDGE_USAGE}\` の形式で記述してください。`, lineNo, "edge.syntax", { usage: EDGE_USAGE });
   }
 
   const edges = [];
@@ -563,7 +571,7 @@ function parseEdgeChain(line, lineNo) {
     const token = tokens[index + 1];
     const to = tokens[index + 2];
     if (!isNodeId(from) || !isNodeId(to)) {
-      throw new WorkflowError("矢印の両端にはノードIDを指定してください。", lineNo);
+      throw workflowError("矢印の両端にはノードIDを指定してください。", lineNo, "edge.endpoint-invalid");
     }
     edges.push({ from, to, type: EDGE_DEFINITIONS_BY_TOKEN.get(token).type });
   }
@@ -571,22 +579,26 @@ function parseEdgeChain(line, lineNo) {
 }
 
 function validateWorkflow({ lanes, nodes, edges, seenSections }) {
-  if (!seenSections.has("lanes")) throw new WorkflowError("`## lanes` セクションを定義してください。");
-  if (!seenSections.has("nodes")) throw new WorkflowError("`## nodes` セクションを定義してください。");
-  if (!seenSections.has("workflow")) throw new WorkflowError("`## workflow` セクションを定義してください。");
-  if (lanes.length === 0) throw new WorkflowError("少なくとも1つのレーンを定義してください。");
+  if (!seenSections.has("lanes")) throw workflowError("`## lanes` セクションを定義してください。", null, "section.lanes-missing");
+  if (!seenSections.has("nodes")) throw workflowError("`## nodes` セクションを定義してください。", null, "section.nodes-missing");
+  if (!seenSections.has("workflow")) throw workflowError("`## workflow` セクションを定義してください。", null, "section.workflow-missing");
+  if (lanes.length === 0) throw workflowError("少なくとも1つのレーンを定義してください。", null, "lane.none");
   const laneSet = new Set(lanes.map((lane) => lane.id));
 
   for (const node of nodes.values()) {
     if (!laneSet.has(node.laneId)) {
-      throw new WorkflowError(`ノード "${node.id}" のレーン "${node.laneId}" が定義されていません。`);
+      throw workflowError(`ノード "${node.id}" のレーン "${node.laneId}" が定義されていません。`, null, "node.lane-undefined", { id: node.id, laneId: node.laneId });
     }
   }
 
   for (const edge of edges) {
-    if (!nodes.has(edge.from)) throw new WorkflowError(`エッジの開始ノード "${edge.from}" が定義されていません。`);
-    if (!nodes.has(edge.to)) throw new WorkflowError(`エッジの終了ノード "${edge.to}" が定義されていません。`);
+    if (!nodes.has(edge.from)) throw workflowError(`エッジの開始ノード "${edge.from}" が定義されていません。`, null, "edge.from-undefined", { id: edge.from });
+    if (!nodes.has(edge.to)) throw workflowError(`エッジの終了ノード "${edge.to}" が定義されていません。`, null, "edge.to-undefined", { id: edge.to });
   }
+}
+
+function workflowError(message, line, code, params = {}) {
+  return new WorkflowError(message, line, code, params);
 }
 
 function straightPathData(x1, y1, x2, y2) {

@@ -8,12 +8,26 @@ import {
   replaceLiteralMatch,
 } from "./editor-assist.js";
 import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
-import { sampleWorkflowSource, starterWorkflowCallout, starterWorkflowSource, workflowExamples } from "./sample-workflow.js";
+import {
+  getSampleWorkflowSource,
+  getStarterWorkflowCallout,
+  getStarterWorkflowSource,
+  getWorkflowExamples,
+} from "./sample-workflow.js";
+import {
+  formatWorkflowError,
+  localizeRoot,
+  persistLocale,
+  resolveLocale,
+  translate,
+  workflowLocaleOptions,
+} from "./i18n.js";
 import "./styles.css";
 
 const stackedWorkspaceQuery = "(max-width: 980px)";
 const mobileWorkflowExamplesQuery = "(max-width: 720px)";
 const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
+let activeLocale = resolveLocale();
 const paneResizeConfig = Object.freeze({
   desktop: {
     minSourceSize: 260,
@@ -154,16 +168,19 @@ document.querySelector("#app").innerHTML = location.pathname.startsWith("/engine
 if (location.pathname.startsWith("/engine")) {
   mountEngine();
 }
+mountLocaleControls();
+applyPageLocale();
 
 function renderTopPage() {
   return `
     <div class="site-shell">
       <header class="site-header">
-        <a class="brand" href="/" aria-label="トップへ">
+        <a class="brand" href="/" aria-label="トップへ" title="トップへ">
           <span class="brand-mark">P</span>
           <span class="brand-text">Timeline Workflow</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
+          ${renderLocaleSwitch()}
           <a href="https://github.com/zohiro00/timeline-workflow-generator" target="_blank" rel="noopener">GitHub</a>
           <a class="nav-primary" href="/engine">Engine</a>
         </nav>
@@ -377,13 +394,13 @@ function renderEnginePage() {
   return `
     <div class="app-shell">
       <header class="titlebar">
-        <a class="titlebar-brand" href="/">
+        <a class="titlebar-brand" href="/" aria-label="トップへ" title="トップへ">
           <span class="brand-mark">P</span>
           <span>Timeline Workflow</span>
         </a>
         <div class="titlebar-title">時系列ワークフロー図ジェネレーター <span>workflow.svg</span></div>
         <nav class="titlebar-nav" aria-label="Engine navigation">
-          <a href="/">Top</a>
+          ${renderLocaleSwitch()}
         </nav>
       </header>
 
@@ -426,12 +443,12 @@ function renderEnginePage() {
                 <button id="editor-search-toggle" class="icon-btn" type="button" aria-label="検索と置換" aria-controls="editor-search-panel" aria-expanded="false" data-tooltip="Find and replace">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
                 </button>
-                <button id="format-sample" class="icon-btn" type="button" aria-label="${escapeHtml(starterWorkflowCallout.actionLabel)}" data-tooltip="${escapeHtml(starterWorkflowCallout.actionTooltip)}">
+                <button id="format-sample" class="icon-btn" type="button" aria-label="${escapeHtml(getStarterWorkflowCallout("ja").actionLabel)}" data-tooltip="${escapeHtml(getStarterWorkflowCallout("ja").actionTooltip)}">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
                 </button>
                 <div id="starter-callout" class="starter-callout" role="note">
-                  <span>${escapeHtml(starterWorkflowCallout.message)}</span>
-                  <button id="starter-callout-dismiss" class="starter-callout-dismiss" type="button" aria-label="${escapeHtml(starterWorkflowCallout.dismissLabel)}">
+                  <span>${escapeHtml(getStarterWorkflowCallout("ja").message)}</span>
+                  <button id="starter-callout-dismiss" class="starter-callout-dismiss" type="button" aria-label="${escapeHtml(getStarterWorkflowCallout("ja").dismissLabel)}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                   </button>
                 </div>
@@ -477,7 +494,7 @@ function renderEnginePage() {
                 <span>Example Workflows</span>
               </button>
               <div id="workflow-examples-body" class="workflow-examples-body">
-                ${workflowExamples.map(renderWorkflowExample).join("")}
+                ${getWorkflowExamples("ja").map(renderWorkflowExample).join("")}
               </div>
             </section>
           </section>
@@ -521,7 +538,7 @@ function renderEnginePage() {
                 </div>
               </div>
             </div>
-            <div id="preview" class="preview-canvas"></div>
+            <div id="preview" class="preview-canvas" data-i18n-ignore></div>
           </section>
         </main>
       </div>
@@ -551,6 +568,111 @@ function renderSettingsGroup(group) {
       </div>
     </section>
   `;
+}
+
+function renderLocaleSwitch() {
+  return `
+    <div class="locale-menu">
+      <button class="locale-menu-toggle" type="button" data-locale-menu-toggle aria-label="言語を変更" title="言語を変更" aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21M12 3C9.6 5.5 8.4 8.5 8.4 12s1.2 6.5 3.6 9" /></svg>
+      </button>
+      <div class="locale-menu-list" data-locale-menu-list role="menu" aria-label="言語を変更" hidden>
+        <button class="locale-menu-item" type="button" role="menuitemradio" data-locale="ja" lang="ja" aria-checked="false"><span class="locale-menu-check" aria-hidden="true">✓</span>日本語</button>
+        <button class="locale-menu-item" type="button" role="menuitemradio" data-locale="en" lang="en" aria-checked="false"><span class="locale-menu-check" aria-hidden="true">✓</span>English</button>
+      </div>
+    </div>
+  `;
+}
+
+function mountLocaleControls() {
+  const menus = [...document.querySelectorAll(".locale-menu")];
+
+  menus.forEach((menu) => {
+    const toggle = menu.querySelector("[data-locale-menu-toggle]");
+    const list = menu.querySelector("[data-locale-menu-list]");
+    const items = [...menu.querySelectorAll("[data-locale]")];
+
+    toggle.addEventListener("click", () => {
+      const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
+      closeLocaleMenus();
+      if (shouldOpen) openLocaleMenu(menu, true);
+    });
+    toggle.addEventListener("keydown", (event) => {
+      if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+      event.preventDefault();
+      closeLocaleMenus();
+      openLocaleMenu(menu, true);
+    });
+    list.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeLocaleMenu(menu, true);
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const currentIndex = items.indexOf(document.activeElement);
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? items.length - 1
+          : (currentIndex + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items[nextIndex].focus();
+    });
+    items.forEach((item) => {
+      item.addEventListener("click", () => {
+        const nextLocale = item.dataset.locale;
+        if (nextLocale !== activeLocale) {
+          activeLocale = nextLocale;
+          persistLocale(activeLocale);
+          applyPageLocale();
+          document.dispatchEvent(new CustomEvent("timeline-workflow-locale-change"));
+        }
+        closeLocaleMenu(menu, true);
+      });
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target)) closeLocaleMenu(menu);
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeLocaleMenus(true);
+  });
+
+  function openLocaleMenu(menu, focusSelected = false) {
+    const toggle = menu.querySelector("[data-locale-menu-toggle]");
+    const list = menu.querySelector("[data-locale-menu-list]");
+    toggle.setAttribute("aria-expanded", "true");
+    list.hidden = false;
+    if (focusSelected) menu.querySelector(`[data-locale="${activeLocale}"]`)?.focus();
+  }
+
+  function closeLocaleMenu(menu, restoreFocus = false) {
+    const toggle = menu.querySelector("[data-locale-menu-toggle]");
+    const list = menu.querySelector("[data-locale-menu-list]");
+    if (toggle.getAttribute("aria-expanded") !== "true") return;
+    toggle.setAttribute("aria-expanded", "false");
+    list.hidden = true;
+    if (restoreFocus) toggle.focus();
+  }
+
+  function closeLocaleMenus(restoreFocus = false) {
+    menus.forEach((menu) => closeLocaleMenu(menu, restoreFocus));
+  }
+}
+
+function applyPageLocale() {
+  document.documentElement.lang = activeLocale;
+  document.title = activeLocale === "ja"
+    ? "時系列ワークフロー図ジェネレーター"
+    : "Timeline Workflow Generator";
+  localizeRoot(document.querySelector("#app"), activeLocale);
+  document.querySelectorAll("[data-locale]").forEach((item) => {
+    item.setAttribute("aria-checked", String(item.dataset.locale === activeLocale));
+  });
 }
 
 function renderWorkflowExample(example) {
@@ -638,7 +760,6 @@ function mountEngine() {
   const paneResizer = document.querySelector(".pane-resizer");
   const examplesToggle = document.querySelector("#examples-toggle");
   const workflowExamplesPanel = examplesToggle.closest(".workflow-examples");
-  const workflowExamplesById = new Map(workflowExamples.map((example) => [example.id, example]));
   const previewZoom = { scale: 1, mode: "fit" };
   let isPreviewMaximized = false;
   let isStarterCalloutDismissed = false;
@@ -649,7 +770,7 @@ function mountEngine() {
   const scheduleRender = debounce(render, 240);
 
   setWorkflowExamplesCollapsed(window.matchMedia(mobileWorkflowExamplesQuery).matches);
-  source.value = sampleWorkflowSource;
+  source.value = getSampleWorkflowSource(activeLocale);
   source.addEventListener("input", () => {
     updateGutter();
     syncStarterCallout();
@@ -673,7 +794,7 @@ function mountEngine() {
   editorReplaceAll.addEventListener("click", replaceAllEditorMatches);
   starterTemplateButton.addEventListener("click", () => {
     isStarterCalloutDismissed = true;
-    source.value = starterWorkflowSource;
+    source.value = getStarterWorkflowSource(activeLocale);
     updateGutter();
     syncStarterCallout();
     render();
@@ -696,6 +817,10 @@ function mountEngine() {
   paneResizer.addEventListener("pointerdown", startPaneResize);
   paneResizer.addEventListener("keydown", resizePaneWithKeyboard);
   examplesToggle.addEventListener("click", toggleWorkflowExamples);
+  document.addEventListener("timeline-workflow-locale-change", () => {
+    render();
+    syncStarterCallout();
+  });
   document.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "f") {
       event.preventDefault();
@@ -751,7 +876,7 @@ function mountEngine() {
 
   document.querySelectorAll("[data-workflow-example]").forEach((button) => {
     button.addEventListener("click", () => {
-      const example = workflowExamplesById.get(button.dataset.workflowExample);
+      const example = getWorkflowExamples(activeLocale).find((candidate) => candidate.id === button.dataset.workflowExample);
       if (!example) return;
       isStarterCalloutDismissed = true;
       source.value = example.source;
@@ -766,7 +891,8 @@ function mountEngine() {
   render();
 
   function syncStarterCallout() {
-    starterCallout.hidden = isStarterCalloutDismissed || source.value !== sampleWorkflowSource;
+    starterCallout.hidden = isStarterCalloutDismissed
+      || ![getSampleWorkflowSource("ja"), getSampleWorkflowSource("en")].includes(source.value);
   }
 
   function openEditorSearch() {
@@ -841,7 +967,7 @@ function mountEngine() {
 
     applyEditorValue(edit.value, edit.selectionStart, edit.selectionEnd);
     refreshEditorSearch(false);
-    statusSummary.textContent = "1件置換しました";
+    statusSummary.textContent = activeLocale === "ja" ? "1件置換しました" : "Replaced 1 match";
   }
 
   function replaceAllEditorMatches() {
@@ -851,14 +977,14 @@ function mountEngine() {
     applyEditorValue(edit.value, 0, 0);
     currentSearchMatch = 0;
     refreshEditorSearch(false);
-    statusSummary.textContent = `${edit.count}件置換しました`;
+    statusSummary.textContent = activeLocale === "ja" ? `${edit.count}件置換しました` : `Replaced ${edit.count} matches`;
   }
 
   function formatEditorSource() {
     const formatted = formatWorkflowSource(source.value);
     const changed = formatted !== source.value;
     if (changed) applyEditorValue(formatted, 0, 0);
-    statusSummary.textContent = changed ? "入力を整形しました" : "整形済みです";
+    statusSummary.textContent = translate(changed ? "入力を整形しました" : "整形済みです", activeLocale);
     source.focus();
   }
 
@@ -927,7 +1053,7 @@ function mountEngine() {
     isPreviewMaximized = nextMaximized;
     workspace.classList.toggle("preview-maximized", isPreviewMaximized);
     previewMaximizeToggle.setAttribute("aria-pressed", String(isPreviewMaximized));
-    previewMaximizeToggle.setAttribute("aria-label", isPreviewMaximized ? "diagram最大化を解除" : "diagramを最大化");
+    previewMaximizeToggle.setAttribute("aria-label", translate(isPreviewMaximized ? "diagram最大化を解除" : "diagramを最大化", activeLocale));
     previewMaximizeToggle.dataset.iconState = isPreviewMaximized ? "restore" : "maximize";
     previewMaximizeToggle.dataset.tooltip = isPreviewMaximized ? "Restore diagram" : "Maximize diagram";
     previewMaximizeToggle.innerHTML = isPreviewMaximized ? previewRestoreIconSvg : previewMaximizeIconSvg;
@@ -1003,14 +1129,15 @@ function mountEngine() {
   function render() {
     updateThemeLabel();
     try {
-      const workflow = layoutWorkflow(parseWorkflow(source.value));
+      const localeOptions = workflowLocaleOptions(activeLocale);
+      const workflow = layoutWorkflow(parseWorkflow(source.value, { defaultTitle: localeOptions.defaultTitle }));
       currentWorkflow = workflow;
       currentSvg = renderWorkflowSvg(workflow, pickWorkflowOptions());
       preview.innerHTML = `<div class="preview-viewport"><div class="preview-art">${currentSvg}</div></div>`;
       syncPreviewZoom();
       status.className = "status ok";
       status.textContent = `${workflow.nodes.length} nodes / ${workflow.edges.length} edges / ${workflow.lanes.length} lanes`;
-      statusSummary.textContent = "Preview updated";
+      statusSummary.textContent = translate("Preview updated", activeLocale);
       setExportEnabled(true);
     } catch (error) {
       currentWorkflow = null;
@@ -1018,19 +1145,19 @@ function mountEngine() {
         showStalePreviewNotice();
       } else {
         currentSvg = "";
-        preview.innerHTML = `<div class="empty-state">構文を確認してください</div>`;
+        preview.innerHTML = `<div class="empty-state">${translate("構文を確認してください", activeLocale)}</div>`;
       }
       updatePreviewZoomControls();
       status.className = "status error";
-      status.textContent = error instanceof WorkflowError ? error.message : String(error);
-      statusSummary.textContent = "Preview not updated";
+      status.textContent = error instanceof WorkflowError ? formatWorkflowError(error, activeLocale) : String(error);
+      statusSummary.textContent = translate("Preview not updated", activeLocale);
       setExportEnabled(false);
     }
   }
 
   function showStalePreviewNotice() {
     if (preview.querySelector(".stale-preview-notice")) return;
-    preview.insertAdjacentHTML("afterbegin", `<div class="stale-preview-notice" role="note">${stalePreviewMessage}</div>`);
+    preview.insertAdjacentHTML("afterbegin", `<div class="stale-preview-notice" role="note">${translate(stalePreviewMessage, activeLocale)}</div>`);
   }
 
   function pickWorkflowOptions() {
@@ -1042,6 +1169,7 @@ function mountEngine() {
       theme: settings.themeHint,
       showTimeLabels: settings.showTimeLabels,
       labelFitStrategy: settings.labelFitStrategy,
+      formatTimeLabel: workflowLocaleOptions(activeLocale).formatTimeLabel,
     };
   }
 
@@ -1049,7 +1177,7 @@ function mountEngine() {
     const themeLabel = document.querySelector("#theme-label");
     const themeSetting = settingsSchema.flatMap((group) => group.items).find((item) => item.id === "themeHint");
     const selectedOption = themeSetting.options.find((option) => option.value === settings.themeHint);
-    themeLabel.textContent = selectedOption?.label ?? "濃い青 / 枠線";
+    themeLabel.textContent = translate(selectedOption?.label ?? "濃い青 / 枠線", activeLocale);
   }
 
   function restoreDefaultSettings() {
@@ -1181,7 +1309,7 @@ function mountEngine() {
     try {
       const blob = await createPngBlobFromSvg(currentSvg);
       downloadBlob(blob, createExportFilename("png"));
-      statusSummary.textContent = "PNG downloaded";
+      statusSummary.textContent = translate("PNG downloaded", activeLocale);
     } catch (error) {
       showExportError(error);
     } finally {
@@ -1192,7 +1320,7 @@ function mountEngine() {
   async function copyPngImage() {
     if (!currentSvg) return;
     if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
-      showExportError(new Error("このブラウザでは画像コピーに対応していません。"));
+      showExportError(new Error(translate("このブラウザでは画像コピーに対応していません。", activeLocale)));
       closeExportMenu();
       return;
     }
@@ -1201,7 +1329,7 @@ function mountEngine() {
       await navigator.clipboard.write([
         new ClipboardItem({ [blob.type]: blob }),
       ]);
-      statusSummary.textContent = "Image copied";
+      statusSummary.textContent = translate("Image copied", activeLocale);
     } catch (error) {
       showExportError(error);
     } finally {
@@ -1215,7 +1343,7 @@ function mountEngine() {
       const { createWorkflowPptxBlob } = await import("./workflow-pptx.js");
       const blob = createWorkflowPptxBlob(currentWorkflow, pickWorkflowOptions());
       downloadBlob(blob, createExportFilename("pptx"));
-      statusSummary.textContent = "PPTX downloaded";
+      statusSummary.textContent = translate("PPTX downloaded", activeLocale);
     } catch (error) {
       showExportError(error);
     } finally {
@@ -1226,7 +1354,7 @@ function mountEngine() {
   function showExportError(error) {
     status.className = "status error";
     status.textContent = error instanceof Error ? error.message : String(error);
-    statusSummary.textContent = "Export failed";
+    statusSummary.textContent = translate("Export failed", activeLocale);
   }
 
   function downloadBlob(blob, filename) {
@@ -1259,7 +1387,7 @@ function mountEngine() {
 
   function createPngBlobFromSvg(svgText) {
     const dimensions = getPreviewSvgDimensions();
-    if (!dimensions) return Promise.reject(new Error("PNGに変換できるプレビューがありません。"));
+    if (!dimensions) return Promise.reject(new Error(translate("PNGに変換できるプレビューがありません。", activeLocale)));
 
     return new Promise((resolve, reject) => {
       const svgBlob = new Blob([svgText], { type: "image/svg+xml" });
@@ -1273,7 +1401,7 @@ function mountEngine() {
         canvas.height = dimensions.height;
         const context = canvas.getContext("2d");
         if (!context) {
-          reject(new Error("PNG変換用のcanvasを初期化できません。"));
+          reject(new Error(translate("PNG変換用のcanvasを初期化できません。", activeLocale)));
           return;
         }
         context.drawImage(image, 0, 0, dimensions.width, dimensions.height);
@@ -1282,12 +1410,12 @@ function mountEngine() {
             resolve(blob);
             return;
           }
-          reject(new Error("PNG画像を生成できません。"));
+          reject(new Error(translate("PNG画像を生成できません。", activeLocale)));
         }, "image/png");
       };
       image.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("SVGをPNGに変換できません。"));
+        reject(new Error(translate("SVGをPNGに変換できません。", activeLocale)));
       };
       image.src = url;
     });

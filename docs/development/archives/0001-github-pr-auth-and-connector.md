@@ -1,5 +1,9 @@
 # 0001: GitHub PR 作成時の認証・コネクタ混乱
 
+> [!IMPORTANT]
+> この文書の「`pnpm run pr:create` を標準にする」という判断は当時の記録であり、現在は superseded です。
+> 現在の正規ルートは [GitHub 操作方針](../github-workflow.md) に従い、ローカル Git で commit・pushした後、GitHub コネクタで draft PR を作成します。`pnpm run pr:create` は fallback です。
+
 ## 日付
 
 2026-06-28

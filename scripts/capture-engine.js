@@ -11,6 +11,7 @@ export const captureOutputDir = new URL("../docs/assets/", import.meta.url);
 export const captureScenarios = [
   {
     name: "engine-desktop",
+    locale: "ja",
     path: "/engine",
     viewport: { width: 1440, height: 900 },
     waitFor: async (page) => {
@@ -19,6 +20,21 @@ export const captureScenarios = [
       await page.locator("#starter-callout-dismiss").click();
       await page.locator("#editor-search-toggle").click();
       await page.locator("#editor-search-input").fill("req");
+      await page.locator("#editor-replace-toggle").click();
+      await page.locator("#editor-replace-input").fill("requester");
+    },
+  },
+  {
+    name: "engine-desktop-en",
+    locale: "en",
+    path: "/engine",
+    viewport: { width: 1440, height: 900 },
+    waitFor: async (page) => {
+      await page.locator("#preview svg").waitFor({ state: "visible" });
+      await page.locator("#status.status.ok").waitFor({ state: "visible" });
+      await page.locator("#starter-callout-dismiss").click();
+      await page.locator("#editor-search-toggle").click();
+      await page.locator("#editor-search-input").fill("request");
       await page.locator("#editor-replace-toggle").click();
       await page.locator("#editor-replace-input").fill("requester");
     },
@@ -35,6 +51,7 @@ export async function runCaptureEngine() {
   try {
     for (const scenario of captureScenarios) {
       const page = await browser.newPage({ viewport: scenario.viewport });
+      await page.addInitScript((locale) => localStorage.setItem("timeline-workflow.locale", locale), scenario.locale);
       await page.goto(`${baseUrl}${scenario.path}`, { waitUntil: "domcontentloaded" });
       await scenario.waitFor(page);
       await page.screenshot({

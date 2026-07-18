@@ -1,8 +1,11 @@
 # Timeline Workflow Preview
 
+English | [日本語](README.ja.md)
+
 Preview timeline workflow diagrams directly from `workflow` code blocks in Markdown.
 
 Edit your Markdown or switch to another Markdown document and the preview updates automatically.
+The extension follows the VS Code display language in English and Japanese.
 
 ![Markdown editor and live workflow preview](https://raw.githubusercontent.com/zohiro00/timeline-workflow-generator/main/vscode-extension/images/preview.png)
 
@@ -42,7 +45,7 @@ Edit your Markdown or switch to another Markdown document and the preview update
 - Only the first `workflow` block in the active Markdown document is previewed.
 - Export is currently available from the web application, not from the extension.
 - Syntax highlighting and code completion are not included.
-- VS Code for the Web is not supported in version 0.1.0.
+- VS Code for the Web is not supported in version 0.2.0.
 
 ## Web application
 

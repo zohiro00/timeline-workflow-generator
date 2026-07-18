@@ -2,11 +2,13 @@ import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
 import { PreviewController } from "./preview-controller.js";
 import { createPreviewHtml } from "./preview-html.js";
+import { createVscodeLocalizer } from "./localization.js";
 
 const viewType = "timelineWorkflow.preview";
 
 export class WorkflowPreviewPanel {
   constructor() {
+    this.localizer = createVscodeLocalizer(vscode);
     this.panel = null;
     this.controller = null;
     this.disposables = [];
@@ -28,12 +30,12 @@ export class WorkflowPreviewPanel {
 
     this.panel = vscode.window.createWebviewPanel(
       viewType,
-      "Workflow Preview",
+      this.localizer.message("previewTitle"),
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true },
     );
-    this.panel.webview.html = createPreviewHtml(randomBytes(16).toString("hex"));
-    this.controller = new PreviewController({ render: (state) => this.render(state) });
+    this.panel.webview.html = createPreviewHtml(randomBytes(16).toString("hex"), this.localizer);
+    this.controller = new PreviewController({ render: (state) => this.render(state), localizer: this.localizer });
 
     this.disposables.push(
       this.panel.onDidDispose(() => this.disposePanel()),

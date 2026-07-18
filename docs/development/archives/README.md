@@ -20,6 +20,7 @@
 - [0006: Codex sandbox で Git メタデータ更新を通常実行する](0006-codex-git-metadata-sandbox.md)
 - [0007: 既存ブランチ再利用で PR 履歴に過去コミットを混ぜる](0007-pr-branch-history-contamination.md)
 - [0008: 古いコミット由来の VSIX を公開候補に残す](0008-vscode-release-artifact-drift.md)
+- [0009: PR 正規ルートの前に CLI 認証を確認する](0009-pr-standard-route-cli-auth-preflight.md)
 
 ## 書き方
 
