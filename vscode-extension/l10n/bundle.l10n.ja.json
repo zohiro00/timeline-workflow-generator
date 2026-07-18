@@ -1,0 +1,10 @@
+{
+  "Workflow Preview": "ワークフロープレビュー",
+  "Open a Markdown file": "Markdownファイルを開いてください",
+  "Preview the workflow code block in the active Markdown file.": "アクティブなMarkdownファイルに含まれる workflow コードブロックをプレビューします。",
+  "No workflow block found": "workflow ブロックが見つかりません",
+  "Add a code block beginning with ```workflow to the Markdown file.": "Markdownに ```workflow で始まるコードブロックを追加してください。",
+  "Unable to display the workflow": "ワークフローを表示できません",
+  "An unexpected error occurred": "予期しないエラーが発生しました",
+  "Workflow preview": "ワークフロープレビュー"
+}

@@ -127,7 +127,7 @@ SHA-256: `<VSIXのSHA-256>`
 ファイルを用意したら、次の形式でReleaseを作成します。
 
 ```bash
-VERSION=0.1.0
+VERSION=0.2.0
 VSIX="vscode-extension/timeline-workflow-preview-${VERSION}.vsix"
 TARGET_SHA="$(git rev-parse origin/main)"
 

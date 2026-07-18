@@ -1,6 +1,8 @@
-export function createPreviewHtml(nonce) {
+import { createDefaultLocalizer } from "./localization.js";
+
+export function createPreviewHtml(nonce, localizer = createDefaultLocalizer()) {
   return `<!doctype html>
-<html lang="ja">
+<html lang="${localizer.locale}">
   <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
@@ -47,7 +49,7 @@ export function createPreviewHtml(nonce) {
         <h1 id="heading"></h1>
         <p id="message"></p>
       </section>
-      <section id="preview" class="preview" hidden aria-label="Workflow preview"></section>
+      <section id="preview" class="preview" hidden aria-label="${localizer.message("previewAriaLabel")}"></section>
     </main>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();

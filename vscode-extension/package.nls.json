@@ -1,0 +1,5 @@
+{
+  "displayName": "Timeline Workflow Preview",
+  "description": "Preview timeline workflow diagrams from workflow blocks in Markdown.",
+  "command.openPreview.title": "Timeline Workflow: Open Preview"
+}

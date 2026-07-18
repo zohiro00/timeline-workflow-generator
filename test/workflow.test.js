@@ -463,7 +463,9 @@ test("rejects invalid lines with line numbers", () => {
 
 test("renders svg with labels and connectors", () => {
   const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(sample)));
-  assert.match(svg, /<svg/);
+  assert.match(svg, /<svg class="workflow-diagram"/);
+  assert.match(svg, /\.workflow-diagram \{ background:/);
+  assert.doesNotMatch(svg, /\n\s+svg \{ background:/);
   assert.match(svg, /購買申請ワークフロー/);
   assert.match(svg, /申請者/);
   assert.match(svg, /marker-end/);

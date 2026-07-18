@@ -105,6 +105,101 @@ svg {
   gap: 6px;
 }
 
+.locale-menu {
+  position: relative;
+}
+
+.locale-menu-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.locale-menu-toggle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.locale-menu-toggle:hover,
+.locale-menu-toggle[aria-expanded="true"] {
+  color: var(--text);
+  background: #ece8e2;
+}
+
+.locale-menu-toggle:focus-visible {
+  outline: 2px solid var(--ppt-orange);
+  outline-offset: 1px;
+}
+
+.titlebar .locale-menu-toggle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.titlebar .locale-menu-toggle:hover,
+.titlebar .locale-menu-toggle[aria-expanded="true"] {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.locale-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 120;
+  min-width: 142px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(60, 52, 45, 0.16);
+}
+
+.locale-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text);
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.locale-menu-item:hover,
+.locale-menu-item:focus-visible {
+  background: #ece8e2;
+  outline: none;
+}
+
+.locale-menu-check {
+  width: 14px;
+  color: var(--ppt-orange);
+  visibility: hidden;
+}
+
+.locale-menu-item[aria-checked="true"] .locale-menu-check {
+  visibility: visible;
+}
+
 .site-nav a,
 .titlebar-nav a {
   color: var(--muted);
@@ -178,6 +273,10 @@ svg {
 
 .hero-title-tail {
   color: var(--text);
+}
+
+html[lang="en"] .hero-title .no-break {
+  white-space: normal;
 }
 
 .hero-sub {
@@ -661,15 +760,27 @@ svg {
 }
 
 .titlebar-brand {
+  flex: 0 0 auto;
   color: #fff;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.brand:focus-visible,
+.titlebar-brand:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 .titlebar-title {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-align: center;
   color: rgba(255, 255, 255, 0.88);
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar-title span {
@@ -680,6 +791,10 @@ svg {
 
 .titlebar-nav a {
   color: rgba(255, 255, 255, 0.86);
+}
+
+.titlebar-nav {
+  flex: 0 0 auto;
 }
 
 .titlebar-nav a:hover {

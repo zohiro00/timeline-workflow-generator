@@ -1,5 +1,7 @@
 # ワークフロー記法仕様
 
+[English](dsl.en.md) | 日本語
+
 Timeline Workflow Generator は、Markdown内の `workflow` コードブロック、またはMarkdown本文から時系列ワークフロー図を生成します。
 ノードの横位置は依存関係から自動計算されるため、座標や余白を手で指定する必要はありません。
 

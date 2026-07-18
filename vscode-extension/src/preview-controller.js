@@ -3,14 +3,15 @@ import { createNoMarkdownState, createPreviewState } from "./preview-state.js";
 export const previewUpdateDelayMs = 150;
 
 export class PreviewController {
-  constructor({ render, schedule = setTimeout, cancel = clearTimeout, delay = previewUpdateDelayMs }) {
+  constructor({ render, localizer, schedule = setTimeout, cancel = clearTimeout, delay = previewUpdateDelayMs }) {
     this.render = render;
     this.schedule = schedule;
     this.cancel = cancel;
     this.delay = delay;
+    this.localizer = localizer;
     this.currentDocument = null;
     this.pendingUpdate = null;
-    this.lastState = createNoMarkdownState();
+    this.lastState = createNoMarkdownState(this.localizer);
   }
 
   showInitial(editor) {
@@ -58,13 +59,13 @@ export class PreviewController {
   }
 
   renderDocument(document) {
-    this.publish(createPreviewState(document.getText(), displayName(document)));
+    this.publish(createPreviewState(document.getText(), displayName(document), this.localizer));
   }
 
   renderNoMarkdown() {
     this.clearPendingUpdate();
     this.currentDocument = null;
-    this.publish(createNoMarkdownState());
+    this.publish(createNoMarkdownState(this.localizer));
   }
 
   publish(state) {

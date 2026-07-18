@@ -23,8 +23,8 @@ Codex から `pnpm test` を実行する場合は、Playwright UI テストが V
 
 - `pnpm run capture:engine` は、スマホなど開発サーバーを直接確認しにくい環境向けの補助コマンドです。
 - 初回または Playwright 更新後に Chromium がない場合は、`pnpm exec playwright install chromium` を実行してください。
-- 現時点では `/engine` の desktop 正常表示だけを `docs/assets/engine-desktop.png` に保存します。
-- この画像は README から参照される tracked asset です。UI を変えた場合は、キャプチャ結果も同じ差分に含めてください。
+- `/engine` の desktop 正常表示を、日本語は `docs/assets/engine-desktop.png`、英語は `docs/assets/engine-desktop-en.png` に保存します。
+- これらの画像は日英 README から参照される tracked asset です。UI を変えた場合は、両言語のキャプチャ結果も同じ差分に含めてください。
 - 通常の品質ゲートではありません。UI変更の確認が必要なときだけ実行してください。
 
 ## 依存管理
