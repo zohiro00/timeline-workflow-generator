@@ -7,6 +7,7 @@ import {
   parseWorkflow,
   renderWorkflowSvg,
   WorkflowError,
+  workflowEdgeSyntax,
   workflowSvgDefaults,
 } from "../src/workflow.js";
 
@@ -39,6 +40,30 @@ test("parses workflow blocks from markdown", () => {
   assert.equal(workflow.edges[2].type, "cross");
   assert.equal(workflow.edges[6].type, "dottedCross");
   assert.equal(workflow.edges[7].type, "invisible");
+});
+
+test("publishes the edge syntax accepted by the parser", () => {
+  assert.equal(Object.isFrozen(workflowEdgeSyntax), true);
+  assert.deepEqual(workflowEdgeSyntax, [
+    { token: "->", type: "solid" },
+    { token: "-.->", type: "dotted" },
+    { token: "-.-", type: "dottedLine" },
+    { token: "-x-", type: "cross" },
+    { token: ".x.", type: "dottedCross" },
+    { token: "~>", type: "invisible" },
+  ]);
+
+  workflowEdgeSyntax.forEach(({ token, type }) => {
+    const workflow = parseWorkflow(`## lanes
+- main: Main
+## nodes
+- main
+  - a: Start
+  - b: Done
+## workflow
+- a ${token} b`);
+    assert.equal(workflow.edges[0].type, type);
+  });
 });
 
 test("example workflows parse and render", () => {

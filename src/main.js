@@ -7,7 +7,7 @@ import {
   replaceAllLiteral,
   replaceLiteralMatch,
 } from "./editor-assist.js";
-import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowSvgDefaults } from "./workflow.js";
+import { layoutWorkflow, parseWorkflow, renderWorkflowSvg, WorkflowError, workflowEdgeSyntax, workflowSvgDefaults } from "./workflow.js";
 import {
   getSampleWorkflowSource,
   getStarterWorkflowCallout,
@@ -27,6 +27,18 @@ import "./styles.css";
 const stackedWorkspaceQuery = "(max-width: 980px)";
 const mobileWorkflowExamplesQuery = "(max-width: 720px)";
 const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
+const syntaxGuideReferenceUrls = Object.freeze({
+  ja: "https://github.com/zohiro00/timeline-workflow-generator/blob/main/docs/dsl.md",
+  en: "https://github.com/zohiro00/timeline-workflow-generator/blob/main/docs/dsl.en.md",
+});
+const edgeGuideContent = Object.freeze({
+  solid: { label: "通常の流れ", description: "実線の矢印を描きます。" },
+  dotted: { label: "点線の流れ", description: "点線の矢印を描きます。" },
+  dottedLine: { label: "点線の依存", description: "矢印のない点線を描きます。" },
+  cross: { label: "中止・却下", description: "線の終端手前に×を描きます。" },
+  dottedCross: { label: "点線の中止・却下", description: "点線の終端手前に×を描きます。" },
+  invisible: { label: "順序だけ指定", description: "線を描かず、bをaより後に配置します。" },
+});
 let activeLocale = resolveLocale();
 const paneResizeConfig = Object.freeze({
   desktop: {
@@ -409,20 +421,32 @@ function renderEnginePage() {
           <button id="settings-toggle" class="activity-btn active" type="button" data-tooltip="Settings" aria-label="Settings" aria-controls="settings-sidebar" aria-expanded="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.08A1.7 1.7 0 0 0 8.6 19a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.08A1.7 1.7 0 0 0 5 8.6a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.08A1.7 1.7 0 0 0 15.4 5a1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.2.38.58.6 1 .6h.1a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.02 1.4Z" /></svg>
           </button>
-          <button class="activity-btn" type="button" data-tooltip="Workflow" aria-label="Workflow">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v5H6zM6 18h12M9 11v7M15 11v7" /></svg>
+          <button id="syntax-guide-toggle" class="activity-btn syntax-guide-toggle" type="button" data-tooltip="Syntax guide" aria-label="記法ガイド" aria-controls="syntax-guide" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 1.8-2.4 2-2.4 3.7M12 17.2v.1" /></svg>
           </button>
           <div class="activity-spacer"></div>
         </nav>
 
+        <div id="syntax-guide-backdrop" class="syntax-guide-backdrop" hidden></div>
         <aside id="settings-sidebar" class="settings-sidebar" aria-label="Settings">
-          <div class="sidebar-header">
-            <span>Settings</span>
-            <button id="reset-settings" class="sidebar-icon-btn" type="button" aria-label="設定を既定値に戻す" data-tooltip="Reset settings">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
-            </button>
+          <div id="settings-panel-view">
+            <div class="sidebar-header">
+              <span>Settings</span>
+              <button id="reset-settings" class="sidebar-icon-btn" type="button" aria-label="設定を既定値に戻す" data-tooltip="Reset settings">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" /></svg>
+              </button>
+            </div>
+            ${settingsSchema.map(renderSettingsGroup).join("")}
           </div>
-          ${settingsSchema.map(renderSettingsGroup).join("")}
+          <section id="syntax-guide" class="syntax-guide" aria-labelledby="syntax-guide-title" hidden>
+            <div class="sidebar-header syntax-guide-header">
+              <span id="syntax-guide-title" tabindex="-1">記法ガイド</span>
+              <button id="syntax-guide-close" class="sidebar-icon-btn" type="button" aria-label="記法ガイドを閉じる">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            ${renderSyntaxGuideContent()}
+          </section>
         </aside>
 
         <main class="workspace">
@@ -567,6 +591,44 @@ function renderSettingsGroup(group) {
         ${group.items.map(renderSetting).join("")}
       </div>
     </section>
+  `;
+}
+
+function renderSyntaxGuideContent() {
+  return `
+    <div class="syntax-guide-content">
+      <p class="syntax-guide-intro">レーン、ノード、つながりの3つを順に定義します。</p>
+      <section class="syntax-guide-section">
+        <h2>基本構造</h2>
+        <dl class="syntax-guide-basics">
+          <div><dt><code># タイトル</code></dt><dd>図のタイトル</dd></div>
+          <div><dt><code>## lanes</code></dt><dd><code>- laneId: レーン名</code></dd></div>
+          <div><dt><code>## nodes</code></dt><dd><code>- laneId</code> の下に、2スペース下げて <code>- nodeId: ノード名</code></dd></div>
+          <div><dt><code>## workflow</code></dt><dd><code>- a -> b</code> の形式でつながりを定義</dd></div>
+        </dl>
+        <p class="syntax-guide-note">IDには半角英数字、_、-を使用できます。</p>
+      </section>
+      <section class="syntax-guide-section">
+        <h2>つながりの記法</h2>
+        <div class="syntax-guide-edges">
+          ${workflowEdgeSyntax.map(({ token, type }) => {
+            const content = edgeGuideContent[type];
+            return `
+              <div class="syntax-guide-edge">
+                <code>a ${escapeHtml(token)} b</code>
+                <div><strong>${content.label}</strong><span>${content.description}</span></div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </section>
+      <section class="syntax-guide-section">
+        <h2>その他</h2>
+        <p><code>- a -> b -> c</code> のように、つながりを1行にまとめられます。</p>
+        <p><code>- nodeId [highlight]: ノード名</code> で、1つのノードを強調できます。</p>
+      </section>
+      <a id="syntax-guide-reference" class="syntax-guide-reference" href="${syntaxGuideReferenceUrls.ja}" target="_blank" rel="noopener">すべての記法を見る</a>
+    </div>
   `;
 }
 
@@ -755,6 +817,14 @@ function mountEngine() {
   const resetSettings = document.querySelector("#reset-settings");
   const engineBody = document.querySelector(".engine-body");
   const settingsToggle = document.querySelector("#settings-toggle");
+  const settingsPanelView = document.querySelector("#settings-panel-view");
+  const settingsSidebar = document.querySelector("#settings-sidebar");
+  const syntaxGuide = document.querySelector("#syntax-guide");
+  const syntaxGuideToggle = document.querySelector("#syntax-guide-toggle");
+  const syntaxGuideClose = document.querySelector("#syntax-guide-close");
+  const syntaxGuideTitle = document.querySelector("#syntax-guide-title");
+  const syntaxGuideBackdrop = document.querySelector("#syntax-guide-backdrop");
+  const syntaxGuideReference = document.querySelector("#syntax-guide-reference");
   const workspace = document.querySelector(".workspace");
   const sourcePane = document.querySelector(".source-pane");
   const paneResizer = document.querySelector(".pane-resizer");
@@ -804,6 +874,9 @@ function mountEngine() {
     syncStarterCallout();
   });
   resetSettings.addEventListener("click", restoreDefaultSettings);
+  syntaxGuideToggle.addEventListener("click", toggleSyntaxGuide);
+  syntaxGuideClose.addEventListener("click", () => closeSyntaxGuide(true));
+  syntaxGuideBackdrop.addEventListener("click", () => closeSyntaxGuide(true));
   exportMenuToggle.addEventListener("click", toggleExportMenu);
   copyImage.addEventListener("click", copyPngImage);
   downloadPng.addEventListener("click", downloadPngImage);
@@ -820,8 +893,17 @@ function mountEngine() {
   document.addEventListener("timeline-workflow-locale-change", () => {
     render();
     syncStarterCallout();
+    syncSyntaxGuideLocale();
   });
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isSyntaxGuideOpen()) {
+      closeSyntaxGuide(true);
+      return;
+    }
+    if (event.key === "Tab" && isSyntaxGuideOpen() && window.matchMedia(mobileWorkflowExamplesQuery).matches) {
+      keepFocusInSyntaxGuide(event);
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "f") {
       event.preventDefault();
       openEditorSearch();
@@ -846,7 +928,12 @@ function mountEngine() {
     closeExportMenu();
   });
   updatePaneResizerOrientation();
-  window.addEventListener("resize", updatePaneResizerOrientation);
+  syncSyntaxGuideLocale();
+  syncSyntaxGuidePresentation();
+  window.addEventListener("resize", () => {
+    updatePaneResizerOrientation();
+    syncSyntaxGuidePresentation();
+  });
   new ResizeObserver(() => {
     if (previewZoom.mode === "fit") resetPreviewZoom();
   }).observe(preview);
@@ -1035,9 +1122,95 @@ function mountEngine() {
   }
 
   function toggleSettingsSidebar() {
+    if (isSyntaxGuideOpen()) {
+      showSettingsSidebar();
+      return;
+    }
     const collapsed = engineBody.classList.toggle("sidebar-collapsed");
     settingsToggle.classList.toggle("active", !collapsed);
     settingsToggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  function showSettingsSidebar() {
+    engineBody.classList.remove("sidebar-collapsed", "syntax-guide-open");
+    settingsPanelView.hidden = false;
+    syntaxGuide.hidden = true;
+    settingsToggle.classList.add("active");
+    settingsToggle.setAttribute("aria-expanded", "true");
+    syntaxGuideToggle.classList.remove("active");
+    syntaxGuideToggle.setAttribute("aria-expanded", "false");
+    syncSyntaxGuidePresentation();
+  }
+
+  function toggleSyntaxGuide() {
+    if (isSyntaxGuideOpen()) {
+      closeSyntaxGuide(false);
+      return;
+    }
+    openSyntaxGuide();
+  }
+
+  function openSyntaxGuide() {
+    engineBody.classList.remove("sidebar-collapsed");
+    engineBody.classList.add("syntax-guide-open");
+    settingsPanelView.hidden = true;
+    syntaxGuide.hidden = false;
+    settingsToggle.classList.remove("active");
+    settingsToggle.setAttribute("aria-expanded", "false");
+    syntaxGuideToggle.classList.add("active");
+    syntaxGuideToggle.setAttribute("aria-expanded", "true");
+    syncSyntaxGuidePresentation();
+    syntaxGuideTitle.focus();
+  }
+
+  function closeSyntaxGuide(restoreFocus) {
+    engineBody.classList.remove("syntax-guide-open");
+    engineBody.classList.add("sidebar-collapsed");
+    syntaxGuide.hidden = true;
+    settingsPanelView.hidden = false;
+    settingsToggle.classList.remove("active");
+    settingsToggle.setAttribute("aria-expanded", "false");
+    syntaxGuideToggle.classList.remove("active");
+    syntaxGuideToggle.setAttribute("aria-expanded", "false");
+    syncSyntaxGuidePresentation();
+    if (restoreFocus) syntaxGuideToggle.focus();
+  }
+
+  function isSyntaxGuideOpen() {
+    return engineBody.classList.contains("syntax-guide-open");
+  }
+
+  function syncSyntaxGuideLocale() {
+    syntaxGuideReference.href = syntaxGuideReferenceUrls[activeLocale];
+    if (isSyntaxGuideOpen()) settingsSidebar.setAttribute("aria-label", translate("記法ガイド", activeLocale));
+  }
+
+  function syncSyntaxGuidePresentation() {
+    const mobile = window.matchMedia(mobileWorkflowExamplesQuery).matches;
+    const open = isSyntaxGuideOpen();
+    syntaxGuideBackdrop.hidden = !open || !mobile;
+    if (open && mobile) {
+      settingsSidebar.setAttribute("role", "dialog");
+      settingsSidebar.setAttribute("aria-modal", "true");
+    } else {
+      settingsSidebar.removeAttribute("role");
+      settingsSidebar.removeAttribute("aria-modal");
+    }
+    settingsSidebar.setAttribute("aria-label", translate(open ? "記法ガイド" : "Settings", activeLocale));
+  }
+
+  function keepFocusInSyntaxGuide(event) {
+    const focusable = [...syntaxGuide.querySelectorAll("button:not([disabled]), a[href]")];
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !syntaxGuide.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function toggleWorkflowExamples() {

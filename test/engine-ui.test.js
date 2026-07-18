@@ -221,6 +221,86 @@ test("engine settings sidebar can be collapsed and reopened", async () => {
   await page.close();
 });
 
+test("engine syntax guide explains every accepted connection without changing the workflow", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const source = page.locator("#source");
+  const sourceBefore = await source.inputValue();
+  const previewBefore = await page.locator("#preview svg").innerHTML();
+  const guideToggle = page.locator("#syntax-guide-toggle");
+  const guide = page.locator("#syntax-guide");
+
+  assert.equal(await page.locator(".activity #syntax-guide-toggle").count(), 1);
+  assert.equal(await page.locator(".source-toolbar-actions #syntax-guide-toggle").count(), 0);
+  await guideToggle.click();
+
+  assert.equal(await guideToggle.getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator("#settings-toggle").getAttribute("aria-expanded"), "false");
+  await expectLocatorVisible(guide);
+  await expectLocatorHidden(page.locator("#settings-panel-view"));
+  assert.deepEqual(await guide.locator(".syntax-guide-edge > code").allTextContents(), [
+    "a -> b",
+    "a -.-> b",
+    "a -.- b",
+    "a -x- b",
+    "a .x. b",
+    "a ~> b",
+  ]);
+  assert.match(await guide.locator(".syntax-guide-edge").last().textContent(), /線を描かず、bをaより後に配置します/);
+  assert.equal(await source.inputValue(), sourceBefore);
+  assert.equal(await page.locator("#preview svg").innerHTML(), previewBefore);
+
+  await page.locator("#settings-toggle").click();
+  await expectLocatorHidden(guide);
+  await expectLocatorVisible(page.locator("#settings-panel-view"));
+  assert.equal(await page.locator("#settings-toggle").getAttribute("aria-expanded"), "true");
+
+  await guideToggle.click();
+  await guideToggle.click();
+  assert.equal(await guideToggle.getAttribute("aria-expanded"), "false");
+  assert.equal(await page.locator(".engine-body").getAttribute("class"), "engine-body sidebar-collapsed");
+  await page.close();
+});
+
+test("engine syntax guide localizes its content and reference link", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 }, "en");
+  await page.locator("#syntax-guide-toggle").click();
+  const guide = page.locator("#syntax-guide");
+
+  assert.doesNotMatch(await guide.textContent(), /[ぁ-んァ-ヶ一-龠々ー]/);
+  assert.match(await guide.textContent(), /Draws no line and places b after a on the timeline/);
+  assert.match(await page.locator("#syntax-guide-reference").getAttribute("href"), /docs\/dsl\.en\.md$/);
+  assert.equal(await page.locator("#syntax-guide-toggle").getAttribute("aria-label"), "Syntax guide");
+  assert.equal(await page.locator("#syntax-guide-close").getAttribute("aria-label"), "Close syntax guide");
+  await page.close();
+});
+
+test("engine syntax guide opens as a keyboard-accessible mobile overlay", async () => {
+  const page = await openEnginePage({ width: 390, height: 844 });
+  const guideToggle = page.locator("#syntax-guide-toggle");
+  const sidebar = page.locator("#settings-sidebar");
+  const reference = page.locator("#syntax-guide-reference");
+
+  await guideToggle.click();
+  const box = await sidebar.boundingBox();
+  assert.equal(await sidebar.getAttribute("role"), "dialog");
+  assert.equal(await sidebar.getAttribute("aria-modal"), "true");
+  assert.ok(box.x >= 0);
+  assert.ok(box.x + box.width <= 390);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+
+  await reference.focus();
+  await page.keyboard.press("Tab");
+  assert.equal(await page.locator("#syntax-guide-close").evaluate((element) => element === document.activeElement), true);
+  await page.keyboard.press("Escape");
+  await expectLocatorHidden(sidebar);
+  assert.equal(await guideToggle.evaluate((element) => element === document.activeElement), true);
+
+  await guideToggle.click();
+  await page.locator("#syntax-guide-backdrop").click({ position: { x: 2, y: 2 } });
+  await expectLocatorHidden(sidebar);
+  await page.close();
+});
+
 test("engine settings start with style first and layout groups collapsed", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
   const groups = page.locator(".settings-group");
