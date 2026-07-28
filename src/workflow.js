@@ -121,9 +121,10 @@ export function parseWorkflow(input, options = {}) {
   const edges = [];
   let title = options.defaultTitle ?? "時系列ワークフロー";
   let currentSection = null;
-  let currentNodeLaneId = null;
+  let currentNodeLaneGroup = null;
   let highlightedNodeId = null;
   const seenSections = new Set();
+  const nodeLaneGroups = [];
 
   source.split(/\r?\n/).forEach((rawLine, index) => {
     const lineNo = lineOffset + index + 1;
@@ -144,7 +145,7 @@ export function parseWorkflow(input, options = {}) {
         throw workflowError("セクションは `## lanes`、`## nodes`、`## workflow` のいずれかで記述してください。", lineNo, "section.invalid");
       }
       currentSection = section;
-      currentNodeLaneId = null;
+      currentNodeLaneGroup = null;
       seenSections.add(section);
       return;
     }
@@ -170,7 +171,7 @@ export function parseWorkflow(input, options = {}) {
       if (nodeMatch) {
         const [, id, rawAttribute, rawLabel] = nodeMatch;
         const label = rawLabel.trim();
-        if (!currentNodeLaneId) throw workflowError("ノードは所属レーンの配下に記述してください。", lineNo, "node.lane-context");
+        if (!currentNodeLaneGroup) throw workflowError("ノードは所属レーンの配下に記述してください。", lineNo, "node.lane-context");
         if (!label) throw workflowError("ノード名が空です。", lineNo, "node.name-empty");
         if (nodes.has(id)) throw workflowError(`ノードID "${id}" が重複しています。`, lineNo, "node.id-duplicate", { id });
         if (rawAttribute !== undefined && rawAttribute !== workflowNodeHighlight.attribute) {
@@ -193,18 +194,27 @@ export function parseWorkflow(input, options = {}) {
         nodes.set(id, {
           id,
           label,
-          laneId: currentNodeLaneId,
+          laneIds: [...currentNodeLaneGroup.laneIds],
           ...(rawAttribute === workflowNodeHighlight.attribute ? { highlighted: true } : {}),
           gridX: 0,
-          gridY: 0,
+          gridYStart: 0,
+          gridYEnd: 0,
         });
         return;
       }
 
-      const laneMatch = trimmed.match(/^-\s+([A-Za-z0-9_-]+)\s*$/);
-      if (laneMatch) {
-        const [, laneId] = laneMatch;
-        currentNodeLaneId = laneId;
+      const laneGroupMatch = trimmed.match(/^-\s+(.+)$/);
+      if (laneGroupMatch) {
+        const rawLaneIds = laneGroupMatch[1].split("+").map((laneId) => laneId.trim());
+        if (rawLaneIds.some((laneId) => !isNodeId(laneId))) {
+          throw workflowError(
+            "共有ノードのレーンは `- lane-a + lane-b` の形式で記述してください。",
+            lineNo,
+            "node.lane-group-syntax",
+          );
+        }
+        currentNodeLaneGroup = { laneIds: rawLaneIds, line: lineNo };
+        nodeLaneGroups.push(currentNodeLaneGroup);
         return;
       }
 
@@ -221,7 +231,7 @@ export function parseWorkflow(input, options = {}) {
     throw workflowError("解釈できない行です。", lineNo, "line.unrecognized");
   });
 
-  validateWorkflow({ lanes, nodes, edges, seenSections });
+  validateWorkflow({ lanes, nodes, edges, seenSections, nodeLaneGroups });
 
   return {
     title,
@@ -235,7 +245,7 @@ export function layoutWorkflow(workflow) {
   const laneIndex = new Map(workflow.lanes.map((lane, index) => [lane.id, index]));
   const activeNodeIds = new Set(workflow.edges.flatMap((edge) => [edge.from, edge.to]));
   const activeNodes = workflow.nodes.filter((node) => activeNodeIds.has(node.id));
-  const nodes = new Map(activeNodes.map((node) => [node.id, { ...node }]));
+  const nodes = new Map(activeNodes.map((node) => [node.id, { ...node, laneIds: [...node.laneIds] }]));
   const incoming = new Map(activeNodes.map((node) => [node.id, []]));
   const outgoing = new Map(activeNodes.map((node) => [node.id, []]));
 
@@ -266,12 +276,25 @@ export function layoutWorkflow(workflow) {
     const node = nodes.get(id);
     const parents = incoming.get(id);
     node.gridX = parents.length === 0 ? 0 : Math.max(...parents.map((parent) => nodes.get(parent).gridX)) + 1;
-    node.gridY = laneIndex.get(node.laneId);
+    const laneIndexes = node.laneIds.map((laneId) => laneIndex.get(laneId));
+    node.gridYStart = Math.min(...laneIndexes);
+    node.gridYEnd = Math.max(...laneIndexes);
+  }
+
+  const laidOutNodes = Array.from(nodes.values());
+  const overlap = findSharedNodeOverlap(laidOutNodes);
+  if (overlap) {
+    throw workflowError(
+      `ノード "${overlap.first.id}" と "${overlap.second.id}" は同じ位置で重なります。依存関係を見直してください。`,
+      null,
+      "node.position-overlap",
+      { firstId: overlap.first.id, secondId: overlap.second.id },
+    );
   }
 
   return {
     ...workflow,
-    nodes: Array.from(nodes.values()),
+    nodes: laidOutNodes,
   };
 }
 
@@ -282,25 +305,42 @@ export function createWorkflowRenderModel(workflow, options = {}) {
   };
   const labelFitStrategy = normalizeLabelFitStrategy(config.labelFitStrategy);
   const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
-  const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
   const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
   const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
   const height = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
+  const nodes = workflow.nodes.map((node) => {
+    const x = config.paddingLeft + node.gridX * config.gridXSize;
+    const y = config.paddingTop + node.gridYStart * config.gridYSize;
+    const nodeHeight = (node.gridYEnd - node.gridYStart) * config.gridYSize + config.nodeHeight;
+    const label = formatSvgLabelLines(node.label, {
+      maxWidth: Math.max(24, config.nodeWidth - 16),
+      maxHeight: Math.max(12, nodeHeight - 8),
+      fontSize: 14,
+      minFontSize: 10,
+      maxLines: 3,
+      strategy: labelFitStrategy,
+    });
+    return {
+      ...node,
+      x,
+      y,
+      width: config.nodeWidth,
+      height: nodeHeight,
+      centerY: y + nodeHeight / 2,
+      label,
+    };
+  });
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const lastLaneBottom = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight;
   const lastRenderedBottom = Math.max(
     config.paddingTop + config.nodeHeight,
     lastLaneBottom,
-    ...workflow.nodes.map((node) => config.paddingTop + node.gridY * config.gridYSize + config.nodeHeight),
+    ...nodes.map((node) => node.y + node.height),
   );
   const timeLineEndY = Math.min(
     height - config.paddingBottom / 2,
     lastRenderedBottom + Math.max(16, config.paddingBottom / 4),
   );
-  const nodePosition = (node) => ({
-    x: config.paddingLeft + node.gridX * config.gridXSize,
-    y: config.paddingTop + node.gridY * config.gridYSize,
-  });
-
   const laneRows = workflow.lanes.map((lane, index) => {
     const y = config.paddingTop + index * config.gridYSize + config.nodeHeight / 2;
     const label = formatSvgLabelLines(lane.label, {
@@ -347,15 +387,13 @@ export function createWorkflowRenderModel(workflow, options = {}) {
 
     const from = nodeById.get(edge.from);
     const to = nodeById.get(edge.to);
-    const fromPos = nodePosition(from);
-    const toPos = nodePosition(to);
-    const x1 = fromPos.x + config.nodeWidth;
-    const y1 = fromPos.y + config.nodeHeight / 2;
-    const x2 = toPos.x;
-    const y2 = toPos.y + config.nodeHeight / 2;
-    const sameLane = from.laneId === to.laneId;
+    const x1 = from.x + from.width;
+    const y1 = from.centerY;
+    const x2 = to.x;
+    const y2 = to.centerY;
+    const sameLane = y1 === y2;
     const forward = to.gridX > from.gridX;
-    const laneGroupKey = `${from.gridY}:${to.gridY}`;
+    const laneGroupKey = `${y1}:${y2}`;
     const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
     edgeLaneGroupCounts.set(laneGroupKey, laneGroupIndex + 1);
     const visibleEdgeIndex = edges.length;
@@ -385,26 +423,6 @@ export function createWorkflowRenderModel(workflow, options = {}) {
     });
   });
 
-  const nodes = workflow.nodes.map((node) => {
-    const { x, y } = nodePosition(node);
-    const label = formatSvgLabelLines(node.label, {
-      maxWidth: Math.max(24, config.nodeWidth - 16),
-      maxHeight: Math.max(12, config.nodeHeight - 8),
-      fontSize: 14,
-      minFontSize: 10,
-      maxLines: 3,
-      strategy: labelFitStrategy,
-    });
-    return {
-      ...node,
-      x,
-      y,
-      width: config.nodeWidth,
-      height: config.nodeHeight,
-      label,
-    };
-  });
-
   return {
     config,
     theme,
@@ -424,109 +442,43 @@ export function createWorkflowRenderModel(workflow, options = {}) {
 }
 
 export function renderWorkflowSvg(workflow, options = {}) {
-  const config = {
-    ...workflowSvgDefaults,
-    ...options,
-  };
-  const labelFitStrategy = normalizeLabelFitStrategy(config.labelFitStrategy);
-  const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
-  const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
-  const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
-  const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
-  const height = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
-  const lastLaneBottom = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight;
-  const lastRenderedBottom = Math.max(
-    config.paddingTop + config.nodeHeight,
-    lastLaneBottom,
-    ...workflow.nodes.map((node) => config.paddingTop + node.gridY * config.gridYSize + config.nodeHeight),
-  );
-  const timeLineEndY = Math.min(
-    height - config.paddingBottom / 2,
-    lastRenderedBottom + Math.max(16, config.paddingBottom / 4),
-  );
-  const nodePosition = (node) => ({
-    x: config.paddingLeft + node.gridX * config.gridXSize,
-    y: config.paddingTop + node.gridY * config.gridYSize,
-  });
+  const model = createWorkflowRenderModel(workflow, options);
+  const { config, theme, width, height } = model;
 
-  const laneRows = workflow.lanes.map((lane, index) => {
-    const y = config.paddingTop + index * config.gridYSize + config.nodeHeight / 2;
-    const label = formatSvgLabelLines(lane.label, {
-      maxWidth: Math.max(32, config.paddingLeft - 48),
-      maxHeight: Math.max(18, config.nodeHeight),
-      fontSize: 14,
-      minFontSize: 10,
-      maxLines: 2,
-      strategy: labelFitStrategy,
-    });
+  const laneRows = model.laneRows.map((lane) => {
     return `
-      <text class="lane-label" x="24" y="${y}" font-size="${label.fontSize}">${renderLabelTspans(label, 24)}</text>
-      <line class="lane-line" x1="${config.paddingLeft - 18}" y1="${y}" x2="${width - config.paddingRight / 2}" y2="${y}" />`;
+      <text class="lane-label" x="${lane.labelX}" y="${lane.y}" font-size="${lane.label.fontSize}">${renderLabelTspans(lane.label, lane.labelX)}</text>
+      <line class="lane-line" x1="${lane.line.x1}" y1="${lane.line.y1}" x2="${lane.line.x2}" y2="${lane.line.y2}" />`;
   });
 
-  const gridLines = Array.from({ length: maxGridX + 1 }, (_, gridX) => {
-    const x = config.paddingLeft + gridX * config.gridXSize + config.nodeWidth / 2;
-    const timeLabel = config.showTimeLabels
+  const gridLines = model.gridLines.map((line) => {
+    const timeLabel = line.timeLabel
       ? `
-      <text class="time-label" x="${x}" y="${config.paddingTop - 48}">${escapeXml(config.formatTimeLabel?.(gridX + 1) ?? `Step ${gridX + 1}`)}</text>`
+      <text class="time-label" x="${line.x}" y="${line.timeLabelY}">${escapeXml(line.timeLabel)}</text>`
       : "";
     return `
-      <line class="time-line" x1="${x}" y1="${config.paddingTop - 36}" x2="${x}" y2="${timeLineEndY}" />${timeLabel}`;
+      <line class="time-line" x1="${line.x}" y1="${line.y1}" x2="${line.x}" y2="${line.y2}" />${timeLabel}`;
   });
 
-  const edgeLaneGroupCounts = new Map();
-  const edges = [];
-  workflow.edges.forEach((edge) => {
-    const edgeDefinition = EDGE_DEFINITIONS_BY_TYPE.get(edge.type);
-    if (edgeDefinition.visible === false) return;
-
-    const from = nodeById.get(edge.from);
-    const to = nodeById.get(edge.to);
-    const fromPos = nodePosition(from);
-    const toPos = nodePosition(to);
-    const x1 = fromPos.x + config.nodeWidth;
-    const y1 = fromPos.y + config.nodeHeight / 2;
-    const x2 = toPos.x;
-    const y2 = toPos.y + config.nodeHeight / 2;
-    const sameLane = from.laneId === to.laneId;
-    const forward = to.gridX > from.gridX;
-    const laneGroupKey = `${from.gridY}:${to.gridY}`;
-    const laneGroupIndex = edgeLaneGroupCounts.get(laneGroupKey) ?? 0;
-    edgeLaneGroupCounts.set(laneGroupKey, laneGroupIndex + 1);
-    const visibleEdgeIndex = edges.length;
-    const pathData = sameLane && forward
-      ? straightPathData(x1, y1, x2, y2)
-      : connectorPathData(x1, y1, x2, y2, laneGroupIndex, visibleEdgeIndex);
-
-    const classes = ["edge"];
-    if (edgeDefinition.dotted) classes.push("edge-dotted");
-    const markerEnd = edgeDefinition.marker === "arrow" ? ' marker-end="url(#arrow)"' : "";
-    const edgePath = `<path class="${classes.join(" ")}" d="${pathData.path}"${markerEnd} />`;
-    edges.push(edgeDefinition.marker === "cross" ? `${edgePath}\n      ${crossMark(pathData)}` : edgePath);
+  const edges = model.edges.map((edge) => {
+    const markerEnd = edge.marker === "arrow" ? ' marker-end="url(#arrow)"' : "";
+    const edgePath = `<path class="${edge.classes.join(" ")}" d="${edge.pathData.path}"${markerEnd} />`;
+    return edge.marker === "cross" ? `${edgePath}\n      ${crossMark(edge.pathData)}` : edgePath;
   });
 
-  const nodes = workflow.nodes.map((node) => {
-    const { x, y } = nodePosition(node);
-    const label = formatSvgLabelLines(node.label, {
-      maxWidth: Math.max(24, config.nodeWidth - 16),
-      maxHeight: Math.max(12, config.nodeHeight - 8),
-      fontSize: 14,
-      minFontSize: 10,
-      maxLines: 3,
-      strategy: labelFitStrategy,
-    });
+  const nodes = model.nodes.map((node) => {
     const classes = ["node"];
     if (node.highlighted) classes.push(workflowNodeHighlight.className);
     return `
-      <g class="${classes.join(" ")}" transform="translate(${x}, ${y})">
-        <rect width="${config.nodeWidth}" height="${config.nodeHeight}" rx="8" />
-        <text x="${config.nodeWidth / 2}" y="${config.nodeHeight / 2}" font-size="${label.fontSize}">${renderLabelTspans(label, config.nodeWidth / 2)}</text>
+      <g class="${classes.join(" ")}" transform="translate(${node.x}, ${node.y})">
+        <rect width="${node.width}" height="${node.height}" rx="8" />
+        <text x="${node.width / 2}" y="${node.height / 2}" font-size="${node.label.fontSize}">${renderLabelTspans(node.label, node.width / 2)}</text>
       </g>`;
   });
 
   return `
 <svg class="workflow-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="workflow-title">
-  <title id="workflow-title">${escapeXml(workflow.title)}</title>
+  <title id="workflow-title">${escapeXml(model.title.text)}</title>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M 0 0 L 8 3 L 0 6 z" fill="${theme.edge}" />
@@ -547,7 +499,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .${workflowNodeHighlight.className} text { fill: ${workflowNodeHighlight.text}; }
     </style>
   </defs>
-  <text x="24" y="38" fill="${theme.title}" font-size="22" font-weight="800">${escapeXml(workflow.title)}</text>
+  <text x="${model.title.x}" y="${model.title.y}" fill="${theme.title}" font-size="${model.title.fontSize}" font-weight="800">${escapeXml(model.title.text)}</text>
   ${gridLines.join("")}
   ${laneRows.join("")}
   ${edges.join("")}
@@ -579,23 +531,65 @@ function parseEdgeChain(line, lineNo) {
   return edges;
 }
 
-function validateWorkflow({ lanes, nodes, edges, seenSections }) {
+function validateWorkflow({ lanes, nodes, edges, seenSections, nodeLaneGroups }) {
   if (!seenSections.has("lanes")) throw workflowError("`## lanes` セクションを定義してください。", null, "section.lanes-missing");
   if (!seenSections.has("nodes")) throw workflowError("`## nodes` セクションを定義してください。", null, "section.nodes-missing");
   if (!seenSections.has("workflow")) throw workflowError("`## workflow` セクションを定義してください。", null, "section.workflow-missing");
   if (lanes.length === 0) throw workflowError("少なくとも1つのレーンを定義してください。", null, "lane.none");
-  const laneSet = new Set(lanes.map((lane) => lane.id));
+  const laneIndex = new Map(lanes.map((lane, index) => [lane.id, index]));
+
+  for (const group of nodeLaneGroups) {
+    const duplicateLaneId = group.laneIds.find((laneId, index) => group.laneIds.indexOf(laneId) !== index);
+    if (duplicateLaneId) {
+      throw workflowError(
+        `共有ノードのレーン "${duplicateLaneId}" が重複しています。`,
+        group.line,
+        "node.lane-duplicate",
+        { laneId: duplicateLaneId },
+      );
+    }
+    const undefinedLaneId = group.laneIds.find((laneId) => !laneIndex.has(laneId));
+    if (undefinedLaneId) {
+      throw workflowError(
+        `ノードの所属レーン "${undefinedLaneId}" が定義されていません。`,
+        group.line,
+        "node.lane-undefined",
+        { laneId: undefinedLaneId },
+      );
+    }
+    const indexes = group.laneIds.map((laneId) => laneIndex.get(laneId)).sort((a, b) => a - b);
+    if (indexes.length > 1 && indexes.at(-1) - indexes[0] + 1 !== indexes.length) {
+      throw workflowError(
+        `共有ノードの対象レーン "${group.laneIds.join(", ")}" は連続していません。`,
+        group.line,
+        "node.lanes-not-contiguous",
+        { laneIds: group.laneIds.join(", ") },
+      );
+    }
+  }
 
   for (const node of nodes.values()) {
-    if (!laneSet.has(node.laneId)) {
-      throw workflowError(`ノード "${node.id}" のレーン "${node.laneId}" が定義されていません。`, null, "node.lane-undefined", { id: node.id, laneId: node.laneId });
-    }
+    node.laneIds.sort((first, second) => laneIndex.get(first) - laneIndex.get(second));
   }
 
   for (const edge of edges) {
     if (!nodes.has(edge.from)) throw workflowError(`エッジの開始ノード "${edge.from}" が定義されていません。`, null, "edge.from-undefined", { id: edge.from });
     if (!nodes.has(edge.to)) throw workflowError(`エッジの終了ノード "${edge.to}" が定義されていません。`, null, "edge.to-undefined", { id: edge.to });
   }
+}
+
+function findSharedNodeOverlap(nodes) {
+  for (let firstIndex = 0; firstIndex < nodes.length; firstIndex += 1) {
+    const first = nodes[firstIndex];
+    for (let secondIndex = firstIndex + 1; secondIndex < nodes.length; secondIndex += 1) {
+      const second = nodes[secondIndex];
+      if (first.laneIds.length === 1 && second.laneIds.length === 1) continue;
+      if (first.gridX !== second.gridX) continue;
+      if (first.gridYStart > second.gridYEnd || second.gridYStart > first.gridYEnd) continue;
+      return { first, second };
+    }
+  }
+  return null;
 }
 
 function workflowError(message, line, code, params = {}) {

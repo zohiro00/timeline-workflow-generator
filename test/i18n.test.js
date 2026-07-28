@@ -32,6 +32,47 @@ test("formats structured workflow errors without changing the legacy message", (
   assert.equal(formatWorkflowError(error, "en"), "Line 4: Lane ID \"main\" is duplicated.");
 });
 
+test("formats shared lane and overlap errors in English", () => {
+  assert.throws(
+    () => parseWorkflow(`## lanes
+- a: A
+- b: B
+- c: C
+## nodes
+- a + c
+  - shared: Shared
+- b
+  - end: End
+## workflow
+- shared -> end`),
+    (error) => {
+      assert.equal(formatWorkflowError(error, "en"), 'Line 6: Shared node lanes "a, c" are not contiguous.');
+      return true;
+    },
+  );
+
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(`## lanes
+- a: A
+- b: B
+- c: C
+## nodes
+- a + b
+  - shared: Shared
+- b
+  - normal: Normal
+- c
+  - end: End
+## workflow
+- shared -> end
+- normal -> end`)),
+    (error) => {
+      assert.equal(formatWorkflowError(error, "en"), 'Nodes "shared" and "normal" overlap at the same position. Update the dependencies.');
+      return true;
+    },
+  );
+});
+
 test("renders locale-specific defaults and time labels", () => {
   const source = `## lanes\n- main: Main\n## nodes\n- main\n  - a: Start\n  - b: Done\n## workflow\n- a -> b`;
   const options = workflowLocaleOptions("en");

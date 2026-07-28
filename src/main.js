@@ -626,6 +626,7 @@ function renderSyntaxGuideContent() {
         <h2>その他</h2>
         <p><code>- a -> b -> c</code> のように、つながりを1行にまとめられます。</p>
         <p><code>- nodeId [highlight]: ノード名</code> で、1つのノードを強調できます。</p>
+        <p><code>- lane-a + lane-b</code> で、連続する複数レーンをまたぐ共有ノードを定義できます。</p>
       </section>
       <a id="syntax-guide-reference" class="syntax-guide-reference" href="${syntaxGuideReferenceUrls.ja}" target="_blank" rel="noopener">すべての記法を見る</a>
     </div>

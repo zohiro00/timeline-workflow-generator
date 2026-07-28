@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { sampleWorkflowSource, workflowExamples } from "../src/sample-workflow.js";
 import {
+  createWorkflowRenderModel,
   generateWorkflowSvg,
   layoutWorkflow,
   parseWorkflow,
@@ -17,6 +18,32 @@ const markdownSample = `# Markdownの中に workflow ブロックを書けます
 \`\`\`workflow
 ${sample}
 \`\`\``;
+const sharedNodeSample = `# Golf
+
+## lanes
+- friend-a: Friend A
+- friend-b: Friend B
+- friend-c: Friend C
+
+## nodes
+- friend-a
+  - a1: Leave home
+  - a2: Pick up B
+- friend-b
+  - b1: Wait at home
+- friend-b + friend-a
+  - ab1 [highlight]: Meet up
+  - ab2: Arrive
+- friend-c
+  - c1: Separate plan
+- friend-c + friend-a + friend-b
+  - abc1: Everyone
+
+## workflow
+- a1 -> a2 -> ab1 -> ab2
+- b1 -> ab1
+- c1 ~> ab2
+`;
 
 test("parses workflow blocks from markdown", () => {
   const workflow = parseWorkflow(markdownSample);
@@ -30,9 +57,10 @@ test("parses workflow blocks from markdown", () => {
   assert.deepEqual(workflow.nodes.find((node) => node.id === "draft"), {
     id: "draft",
     label: "申請作成",
-    laneId: "requester",
+    laneIds: ["requester"],
     gridX: 0,
-    gridY: 0,
+    gridYStart: 0,
+    gridYEnd: 0,
   });
   assert.equal(workflow.nodes.length, 8);
   assert.equal(workflow.edges.length, 8);
@@ -67,7 +95,7 @@ test("publishes the edge syntax accepted by the parser", () => {
 });
 
 test("example workflows parse and render", () => {
-  assert.equal(workflowExamples.length, 4);
+  assert.equal(workflowExamples.length, 5);
 
   for (const example of workflowExamples) {
     const workflow = layoutWorkflow(parseWorkflow(example.source));
@@ -122,23 +150,123 @@ test("parses a single node highlight without changing regular node data", () => 
   assert.deepEqual(parsed.nodes[0], {
     id: "a",
     label: "Focus",
-    laneId: "main",
+    laneIds: ["main"],
     highlighted: true,
     gridX: 0,
-    gridY: 0,
+    gridYStart: 0,
+    gridYEnd: 0,
   });
   assert.deepEqual(parsed.nodes[1], {
     id: "b",
     label: "Next [highlight]",
-    laneId: "main",
+    laneIds: ["main"],
     gridX: 0,
-    gridY: 0,
+    gridYStart: 0,
+    gridYEnd: 0,
   });
   assert.deepEqual(
-    highlightedLayout.nodes.map(({ id, gridX, gridY }) => ({ id, gridX, gridY })),
-    regularLayout.nodes.map(({ id, gridX, gridY }) => ({ id, gridX, gridY })),
+    highlightedLayout.nodes.map(({ id, gridX, gridYStart, gridYEnd }) => ({ id, gridX, gridYStart, gridYEnd })),
+    regularLayout.nodes.map(({ id, gridX, gridYStart, gridYEnd }) => ({ id, gridX, gridYStart, gridYEnd })),
   );
   assert.deepEqual(highlightedLayout.edges, regularLayout.edges);
+});
+
+test("parses shared node lanes and normalizes them to lane definition order", () => {
+  const parsed = parseWorkflow(sharedNodeSample);
+  const shared = parsed.nodes.find((node) => node.id === "ab1");
+  const normal = parsed.nodes.find((node) => node.id === "a1");
+  const sharedAcrossThree = parsed.nodes.find((node) => node.id === "abc1");
+
+  assert.deepEqual(shared, {
+    id: "ab1",
+    label: "Meet up",
+    laneIds: ["friend-a", "friend-b"],
+    highlighted: true,
+    gridX: 0,
+    gridYStart: 0,
+    gridYEnd: 0,
+  });
+  assert.deepEqual(normal.laneIds, ["friend-a"]);
+  assert.deepEqual(sharedAcrossThree.laneIds, ["friend-a", "friend-b", "friend-c"]);
+});
+
+test("lays out and renders a shared node as one shape spanning contiguous lanes", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sharedNodeSample));
+  const shared = workflow.nodes.find((node) => node.id === "ab1");
+  const model = createWorkflowRenderModel(workflow);
+  const renderedShared = model.nodes.find((node) => node.id === "ab1");
+  const sharedEdge = model.edges.find((edge) => edge.from === "ab1" && edge.to === "ab2");
+  const svg = renderWorkflowSvg(workflow);
+
+  assert.deepEqual(
+    { gridX: shared.gridX, gridYStart: shared.gridYStart, gridYEnd: shared.gridYEnd },
+    { gridX: 2, gridYStart: 0, gridYEnd: 1 },
+  );
+  assert.deepEqual(
+    { x: renderedShared.x, y: renderedShared.y, width: renderedShared.width, height: renderedShared.height, centerY: renderedShared.centerY },
+    { x: 516, y: 116, width: 112, height: 158, centerY: 195 },
+  );
+  assert.equal(sharedEdge.pathData.path, "M 628 195 L 704 195");
+  assert.match(svg, /class="node node-highlighted" transform="translate\(516, 116\)">\s*<rect width="112" height="158" rx="8" \/>/);
+  assert.ok(svg.indexOf('class="lane-line"') < svg.indexOf('transform="translate(516, 116)"'));
+});
+
+test("rejects invalid shared lane groups with line numbers", () => {
+  const source = (laneGroup) => `# Invalid shared lanes
+
+## lanes
+- a: A
+- b: B
+- c: C
+
+## nodes
+- ${laneGroup}
+  - shared: Shared
+- a
+  - end: End
+
+## workflow
+- shared -> end
+`;
+
+  assert.throws(() => parseWorkflow(source("a + a")), /Line 9: 共有ノードのレーン "a" が重複しています。/);
+  assert.throws(() => parseWorkflow(source("a + missing")), /Line 9: ノードの所属レーン "missing" が定義されていません。/);
+  assert.throws(() => parseWorkflow(source("a + c")), /Line 9: 共有ノードの対象レーン "a, c" は連続していません。/);
+  assert.throws(() => parseWorkflow(source("a +")), /Line 9: 共有ノードのレーンは `- lane-a \+ lane-b` の形式で記述してください。/);
+});
+
+test("rejects overlaps involving shared nodes but keeps regular-node compatibility", () => {
+  const source = (firstGroup, secondGroup) => `# Overlap
+
+## lanes
+- a: A
+- b: B
+- c: C
+- d: D
+
+## nodes
+- ${firstGroup}
+  - first: First
+- ${secondGroup}
+  - second: Second
+- d
+  - end: End
+
+## workflow
+- first -> end
+- second -> end
+`;
+
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(source("a + b", "b"))),
+    /ノード "first" と "second" は同じ位置で重なります。/,
+  );
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(source("a + b", "b + c"))),
+    /ノード "first" と "second" は同じ位置で重なります。/,
+  );
+  assert.doesNotThrow(() => layoutWorkflow(parseWorkflow(source("a + b", "c + d"))));
+  assert.doesNotThrow(() => layoutWorkflow(parseWorkflow(source("a", "a"))));
 });
 
 test("rejects multiple or unknown node highlight attributes", () => {
@@ -217,7 +345,8 @@ test("computes gridX by longest dependency path", () => {
   assert.equal(nodes.get("over_budget").gridX, 4);
   assert.equal(nodes.get("order").gridX, 4);
   assert.equal(nodes.get("received").gridX, 5);
-  assert.equal(nodes.get("review").gridY, 1);
+  assert.equal(nodes.get("review").gridYStart, 1);
+  assert.equal(nodes.get("review").gridYEnd, 1);
 });
 
 test("renders only nodes referenced by workflow edges", () => {
@@ -448,7 +577,7 @@ test("rejects undefined lanes and nodes", () => {
 ## workflow
 - a -> a
 `),
-    /ノード "a" のレーン "missing" が定義されていません。/,
+    /Line 7: ノードの所属レーン "missing" が定義されていません。/,
   );
 
   assert.throws(

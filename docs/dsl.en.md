@@ -58,6 +58,22 @@ In `## nodes`, write a parent lane as `- laneId`, followed by its nodes indented
 
 Node IDs follow the same character rules as lane IDs and must be unique. Only nodes referenced by a dependency in `## workflow` are rendered.
 
+### Nodes shared by multiple lanes
+
+Join parent lane IDs with `+` when one event is shared by contiguous lanes:
+
+```workflow
+## nodes
+- development + qa
+  - quality_review [highlight]: Quality review
+- development + qa + operations
+  - release_review: Release decision
+```
+
+A shared node is rendered as one shape spanning from the top of the first target lane to the bottom of the last. It supports dependencies and `[highlight]` like a regular node. Lane IDs may be written in any order and are normalized to the order declared in `## lanes`; source formatting canonicalizes spacing as `lane-a + lane-b`.
+
+The target lanes must be contiguous. Undefined lanes, duplicate lanes, non-contiguous lanes, and overlapping ranges at the same Step involving a shared node are errors. Existing regular-node overlaps are tracked separately in Issue #72.
+
 ### Highlighting a node
 
 Add `[highlight]` immediately after one node ID to emphasize it:
@@ -113,7 +129,7 @@ Text following `%%` is treated as a comment. `#` is reserved for Markdown headin
 
 ## Common errors
 
-The parser reports the source line and a correction-oriented message for missing sections, empty labels, invalid indentation, duplicate IDs, undefined lanes or nodes, unsupported attributes, invalid arrows, and cyclic dependencies.
+The parser reports the source line and a correction-oriented message for missing sections, empty labels, invalid indentation, duplicate IDs, invalid shared lane groups, undefined lanes or nodes, unsupported attributes, invalid arrows, and cyclic dependencies.
 
 A cycle prevents the application from calculating horizontal timeline positions. Update the arrows until the dependency graph is a DAG.
 

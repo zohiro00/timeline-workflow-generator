@@ -20,6 +20,25 @@ const sample = `# PPTX Connector Test
 ## workflow
 - a -> b -.-> c
 `;
+const sharedSample = `# Shared PPTX
+
+## lanes
+- a: A
+- b: B
+
+## nodes
+- a
+  - a1: A1
+- b
+  - b1: B1
+- a + b
+  - ab1 [highlight]: Meet
+  - ab2: Arrive
+
+## workflow
+- a1 -> ab1 -> ab2
+- b1 -> ab1
+`;
 
 test("generates a pptx package without raster image parts", () => {
   const workflow = layoutWorkflow(parseWorkflow(sample));
@@ -66,6 +85,26 @@ test("writes PowerPoint connector shapes bound to node shape ids", () => {
   assert.match(slide, connectionPattern(bId, cId));
   assert.match(slide, /<a:tailEnd type="triangle"\/>/);
   assert.match(slide, /<a:prstDash val="dash"\/>/);
+});
+
+test("writes a shared node as one tall editable shape with bound connectors", () => {
+  const workflow = layoutWorkflow(parseWorkflow(sharedSample));
+  const slide = createWorkflowPptxFiles(workflow)["ppt/slides/slide1.xml"];
+  const a1Id = shapeId(slide, "a1");
+  const b1Id = shapeId(slide, "b1");
+  const ab1Id = shapeId(slide, "ab1");
+  const ab2Id = shapeId(slide, "ab2");
+  const regularExtent = shapeExtent(shapeXml(slide, "a1"));
+  const sharedShape = shapeXml(slide, "ab1");
+  const sharedExtent = shapeExtent(sharedShape);
+
+  assert.equal((slide.match(/name="ab1"\/>/g) ?? []).length, 1);
+  assert.equal(sharedExtent.width, regularExtent.width);
+  assert.ok(sharedExtent.height > regularExtent.height * 3);
+  assert.match(sharedShape, /<a:srgbClr val="FCECEC"\/>/);
+  assert.match(slide, connectionPattern(a1Id, ab1Id));
+  assert.match(slide, connectionPattern(b1Id, ab1Id));
+  assert.match(slide, connectionPattern(ab1Id, ab2Id));
 });
 
 test("styles only the highlighted PowerPoint node", () => {
@@ -263,6 +302,12 @@ function nodeStrokeWidth(shape) {
   const match = shape.match(/<a:ln w="(\d+)">/);
   assert.ok(match, "node stroke width should exist");
   return Number(match[1]);
+}
+
+function shapeExtent(shape) {
+  const match = shape.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+  assert.ok(match, "shape extent should exist");
+  return { width: Number(match[1]), height: Number(match[2]) };
 }
 
 function connectionPattern(fromId, toId) {
