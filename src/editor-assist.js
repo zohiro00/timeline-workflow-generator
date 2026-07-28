@@ -48,6 +48,12 @@ export function formatWorkflowSource(value) {
     if (/^#{1,6}\s/.test(formatted) || /^```/.test(formatted)) section = "";
 
     formatted = formatted.replace(/^(\s*)-\s*/, "$1- ");
+    if (section === "nodes") {
+      formatted = formatted.replace(
+        /^-\s+([A-Za-z0-9_-]+(?:\s*\+\s*[A-Za-z0-9_-]+)+)\s*$/,
+        (_, laneIds) => `- ${laneIds.split("+").map((laneId) => laneId.trim()).join(" + ")}`,
+      );
+    }
     if (section === "workflow") {
       formatted = formatted.replace(/\s*(-\.->|-->)\s*/g, " $1 ");
     }

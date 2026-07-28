@@ -10,6 +10,7 @@ A web application that generates lane-based timeline diagrams from dependency-ba
 
 - Declarative `## lanes`, `## nodes`, and `## workflow` syntax
 - Automatic DAG-based timeline layout
+- Shared nodes spanning contiguous lanes
 - Solid, dotted, rejected, and invisible dependencies
 - Editable PowerPoint shapes and connectors
 - SVG / PNG download and image copy

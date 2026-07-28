@@ -147,6 +147,35 @@ export const workflowExamples = [
 - triage -> fix -> notify
 - notify -> review`,
   },
+  {
+    id: "shared-event",
+    title: "システムリリース",
+    description: "開発・QA・運用が共有する確認工程を経て本番反映まで",
+    source: `# システムリリースワークフロー
+
+## lanes
+- product: 企画
+- development: 開発
+- qa: QA
+- operations: 運用
+
+## nodes
+- product
+  - requirements: 要件確定
+- development
+  - implementation: 実装
+- qa
+  - testing: テスト
+- development + qa
+  - quality_review [highlight]: 品質確認会
+- development + qa + operations
+  - release_review: リリース判定
+- operations
+  - deployment: 本番反映
+
+## workflow
+- requirements -> implementation -> testing -> quality_review -> release_review -> deployment`,
+  },
 ];
 
 export const sampleWorkflowSourceEn = `# Purchase Request Workflow
@@ -290,6 +319,35 @@ const workflowExamplesEn = [
 - triage -> workaround -> notify
 - triage -> fix -> notify
 - notify -> review`,
+  },
+  {
+    id: "shared-event",
+    title: "System release",
+    description: "From shared development, QA, and operations reviews through production deployment",
+    source: `# System Release Workflow
+
+## lanes
+- product: Product
+- development: Development
+- qa: QA
+- operations: Operations
+
+## nodes
+- product
+  - requirements: Finalize requirements
+- development
+  - implementation: Implement
+- qa
+  - testing: Test
+- development + qa
+  - quality_review [highlight]: Quality review
+- development + qa + operations
+  - release_review: Release decision
+- operations
+  - deployment: Deploy to production
+
+## workflow
+- requirements -> implementation -> testing -> quality_review -> release_review -> deployment`,
   },
 ];
 

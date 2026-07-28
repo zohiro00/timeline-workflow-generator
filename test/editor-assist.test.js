@@ -127,9 +127,9 @@ test("replaces every literal match and reports the replacement count", () => {
 });
 
 test("formats workflow whitespace and notation without changing labels", () => {
-  const source = `# 申請フロー  \n\n\n##   lanes\n-   req: 申請者\t\n## nodes\n- req\n\t-   draft: 申請 作成\n## workflow\n- draft-->done`;
+  const source = `# 申請フロー  \n\n\n##   lanes\n-   req: 申請者\t\n- manager: 上長\n## nodes\n- req+manager\n\t-   draft: 申請 作成\n## workflow\n- draft-->done`;
 
-  assert.equal(formatWorkflowSource(source), `# 申請フロー\n\n## lanes\n- req: 申請者\n## nodes\n- req\n  - draft: 申請 作成\n## workflow\n- draft --> done`);
+  assert.equal(formatWorkflowSource(source), `# 申請フロー\n\n## lanes\n- req: 申請者\n- manager: 上長\n## nodes\n- req + manager\n  - draft: 申請 作成\n## workflow\n- draft --> done`);
 });
 
 test("does not normalize arrows in prose after the workflow section", () => {

@@ -7,6 +7,23 @@ const host = "127.0.0.1";
 const port = Number(process.env.UI_TEST_PORT ?? 5183);
 const baseUrl = `http://${host}:${port}`;
 const vscodeMarketplaceUrl = "https://marketplace.visualstudio.com/items?itemName=zohiro00.timeline-workflow-preview";
+const sharedUiSource = `# Shared export
+
+## lanes
+- a: A
+- b: B
+
+## nodes
+- a
+  - a1: A1
+- b
+  - b1: B1
+- a + b
+  - shared: Shared
+
+## workflow
+- a1 -> shared
+- b1 -> shared`;
 
 let devServer;
 let browser;
@@ -274,6 +291,7 @@ test("engine syntax guide explains every accepted connection without changing th
     "a ~> b",
   ]);
   assert.match(await guide.locator(".syntax-guide-edge").last().textContent(), /線を描かず、bをaより後に配置します/);
+  assert.match(await guide.textContent(), /連続する複数レーンをまたぐ共有ノード/);
   assert.equal(await source.inputValue(), sourceBefore);
   assert.equal(await page.locator("#preview svg").innerHTML(), previewBefore);
 
@@ -511,6 +529,10 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
   const exportToggle = page.locator("#export-menu-toggle");
   const timestampedFilenamePattern = /^workflow-\d{8}-\d{6}\.(svg|png|pptx)$/;
 
+  await page.locator("#source").fill(sharedUiSource);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "Shared export");
+  assert.equal(await page.locator("#preview .node rect").last().getAttribute("height"), "158");
+
   await exportToggle.click();
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),
@@ -545,6 +567,8 @@ test("engine export menu downloads svg, png, and pptx files", async () => {
 
 test("engine export menu copies the rendered png image", async () => {
   const page = await openEnginePage({ width: 1280, height: 820 });
+  await page.locator("#source").fill(sharedUiSource);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "Shared export");
   await page.evaluate(() => {
     Object.defineProperty(window, "ClipboardItem", {
       configurable: true,
@@ -680,7 +704,7 @@ test("engine workflow examples can be expanded and applied", async () => {
   const examples = page.locator(".workflow-example");
   const toggle = page.locator("#examples-toggle");
 
-  assert.equal(await examples.count(), 4);
+  assert.equal(await examples.count(), 5);
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");
   await expectLocatorVisible(examples.first());
   await page.getByRole("button", { name: /購買申請/ }).click();
@@ -693,6 +717,11 @@ test("engine workflow examples can be expanded and applied", async () => {
   assert.match(await page.locator("#source").inputValue(), /^# 採用選考ワークフロー/);
   await page.locator("#preview svg title").waitFor({ state: "attached" });
   assert.equal(await page.locator("#preview svg title").textContent(), "採用選考ワークフロー");
+
+  await page.getByRole("button", { name: /システムリリース/ }).click();
+  assert.match(await page.locator("#source").inputValue(), /^# システムリリースワークフロー/);
+  assert.equal(await page.locator("#preview .node-highlighted rect").getAttribute("height"), "158");
+  assert.equal(await page.locator("#preview .node rect").evaluateAll((rects) => rects.some((rect) => rect.getAttribute("height") === "274")), true);
 
   await toggle.click();
   assert.equal(await toggle.getAttribute("aria-expanded"), "false");
@@ -713,7 +742,7 @@ test("engine editor and workflow examples stay visible and tappable on mobile sc
   const example = exampleButtons.first();
   const examples = page.locator(".workflow-examples");
 
-  assert.equal(await exampleButtons.count(), 4);
+  assert.equal(await exampleButtons.count(), 5);
   assert.equal(await toggle.getAttribute("aria-expanded"), "false");
   await expectLocatorHidden(example);
   await toggle.click();

@@ -38,6 +38,28 @@ test("renders only the first workflow block", () => {
   assert.doesNotMatch(state.svg, /Ignored/);
 });
 
+test("renders shared nodes across contiguous lanes", () => {
+  const state = createPreviewState(`\`\`\`workflow
+# Shared
+## lanes
+- a: A
+- b: B
+## nodes
+- a
+  - a1: A1
+- b
+  - b1: B1
+- a + b
+  - shared: Meet
+## workflow
+- a1 -> shared
+- b1 -> shared
+\`\`\``, "shared.md");
+
+  assert.equal(state.kind, "ready");
+  assert.match(state.svg, /<rect width="112" height="158" rx="8" \/>/);
+});
+
 test("creates guidance when a workflow block is missing", () => {
   const state = createPreviewState("# Ordinary Markdown", "notes.md");
 

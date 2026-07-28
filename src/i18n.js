@@ -173,6 +173,7 @@ const englishMessages = new Map(Object.entries({
   "のように、つながりを1行にまとめられます。": "chains connections on one line.",
   "- nodeId [highlight]: ノード名": "- nodeId [highlight]: Node name",
   "で、1つのノードを強調できます。": "highlights one node.",
+  "で、連続する複数レーンをまたぐ共有ノードを定義できます。": "defines a shared node spanning contiguous lanes.",
   "すべての記法を見る": "View all syntax",
   "購買申請": "Purchase request",
   "申請作成から承認、予算確認、発注まで": "From request creation through approval, budget review, and ordering",
@@ -182,6 +183,8 @@ const englishMessages = new Map(Object.entries({
   "応募受付から面接、内定、入社準備まで": "From application through interviews, offer, and onboarding",
   "障害対応": "Incident response",
   "検知から一次対応、復旧、ふりかえりまで": "From detection through response, recovery, and review",
+  "システムリリース": "System release",
+  "開発・QA・運用が共有する確認工程を経て本番反映まで": "From shared development, QA, and operations reviews through production deployment",
 }));
 
 const englishErrorMessages = Object.freeze({
@@ -196,6 +199,10 @@ const englishErrorMessages = Object.freeze({
   "node.id-duplicate": "Node ID \"{id}\" is duplicated.",
   "node.attribute-unsupported": "Node attribute \"{attribute}\" is not supported. The available attribute is `{supported}`.",
   "node.highlight-duplicate": "Only one node per workflow can use `{attribute}`. Node \"{id}\" is already highlighted.",
+  "node.lane-group-syntax": "Write shared node lanes as `- lane-a + lane-b`.",
+  "node.lane-duplicate": "Lane \"{laneId}\" is duplicated in the shared node lanes.",
+  "node.lanes-not-contiguous": "Shared node lanes \"{laneIds}\" are not contiguous.",
+  "node.position-overlap": "Nodes \"{firstId}\" and \"{secondId}\" overlap at the same position. Update the dependencies.",
   "nodes.syntax": "Write nodes as `- laneId` followed by `  - nodeId: Node name`.",
   "workflow.syntax": "Write workflow entries as `- a -> b`.",
   "line.unrecognized": "This line could not be interpreted.",
@@ -206,7 +213,7 @@ const englishErrorMessages = Object.freeze({
   "section.nodes-missing": "Define a `## nodes` section.",
   "section.workflow-missing": "Define a `## workflow` section.",
   "lane.none": "Define at least one lane.",
-  "node.lane-undefined": "Lane \"{laneId}\" for node \"{id}\" is not defined.",
+  "node.lane-undefined": "Node lane \"{laneId}\" is not defined.",
   "edge.from-undefined": "The edge start node \"{id}\" is not defined.",
   "edge.to-undefined": "The edge end node \"{id}\" is not defined.",
 });
