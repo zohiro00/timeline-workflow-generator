@@ -623,6 +623,10 @@ function renderSyntaxGuideContent() {
         </div>
       </section>
       <section class="syntax-guide-section">
+        <h2>補助表示</h2>
+        <p><code>### annotations</code> の下に <code>- a &lt;- b</code> と書くと、レイアウトに影響しない戻り線を描画します。</p>
+      </section>
+      <section class="syntax-guide-section">
         <h2>その他</h2>
         <p><code>- a -> b -> c</code> のように、つながりを1行にまとめられます。</p>
         <p><code>- nodeId [highlight]: ノード名</code> で、1つのノードを強調できます。</p>

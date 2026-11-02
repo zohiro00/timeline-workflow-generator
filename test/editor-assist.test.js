@@ -137,3 +137,12 @@ test("does not normalize arrows in prose after the workflow section", () => {
 
   assert.equal(formatWorkflowSource(source), "## workflow\n- draft --> done\n\n## Notes\n- `a-->b` は別の例");
 });
+
+test("formats return annotations inside the workflow section", () => {
+  const source = "## workflow\n- draft-->review\n###annotations\n- draft<-review";
+
+  assert.equal(
+    formatWorkflowSource(source),
+    "## workflow\n- draft --> review\n### annotations\n- draft <- review",
+  );
+});

@@ -110,7 +110,32 @@ Define dependencies as a Markdown list:
 | `a .x. b` | Dotted rejected dependency | Dotted line with a cross near the end |
 | `a ~> b` | Invisible dependency | Affects timeline order without drawing a line |
 
-Both ends must be IDs of defined nodes. Consecutive dependencies can be chained on one line:
+Both ends must be IDs of defined nodes.
+
+### annotations
+
+Use `### annotations` inside `## workflow` for failure, revision, retry, and other return relationships that should not change timeline layout.
+
+```workflow
+## workflow
+- generate -> review -> delivery
+
+### annotations
+- generate <- review
+```
+
+`generate <- review` draws a dotted arrow from `review` back to `generate`. An annotation does not affect horizontal node positions, cycle detection, or regular dependencies. Both endpoints must also be referenced by regular workflow dependencies.
+
+Return annotations can be chained. Each annotation receives an automatically generated track, so you never specify coordinates or routing.
+
+```workflow
+### annotations
+- first <- second <- third
+```
+
+See [return annotation examples](annotation-examples.en.md) for five complete use cases.
+
+Consecutive dependencies can be chained on one line:
 
 ```workflow
 - a1 -> a2 -> b1 -> b2

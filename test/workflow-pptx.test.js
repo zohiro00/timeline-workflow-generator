@@ -39,6 +39,23 @@ const sharedSample = `# Shared PPTX
 - a1 -> ab1 -> ab2
 - b1 -> ab1
 `;
+const annotationSample = `# Return annotation
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - generate: Generate
+  - review: Review
+  - delivery: Delivery
+
+## workflow
+- generate -> review -> delivery
+
+### annotations
+- generate <- review
+`;
 
 test("generates a pptx package without raster image parts", () => {
   const workflow = layoutWorkflow(parseWorkflow(sample));
@@ -85,6 +102,23 @@ test("writes PowerPoint connector shapes bound to node shape ids", () => {
   assert.match(slide, connectionPattern(bId, cId));
   assert.match(slide, /<a:tailEnd type="triangle"\/>/);
   assert.match(slide, /<a:prstDash val="dash"\/>/);
+});
+
+test("writes return annotations as editable PowerPoint connector segments", () => {
+  const workflow = layoutWorkflow(parseWorkflow(annotationSample));
+  const slide = createWorkflowPptxFiles(workflow)["ppt/slides/slide1.xml"];
+  const generateId = shapeId(slide, "generate");
+  const reviewId = shapeId(slide, "review");
+
+  assert.match(slide, /name="annotation review to generate segment 1"/u);
+  assert.match(slide, /name="annotation review to generate segment 2"/u);
+  assert.match(slide, /name="annotation review to generate segment 3"/u);
+  assert.match(slide, /name="annotation review to generate segment 4"/u);
+  assert.match(slide, /name="annotation review to generate segment 5"/u);
+  assert.match(slide, new RegExp(`<a:stCxn id="${reviewId}" idx="3"\/>`));
+  assert.match(slide, new RegExp(`<a:endCxn id="${generateId}" idx="1"\/>`));
+  assert.match(slide, /<a:prstDash val="dash"\/>/u);
+  assert.match(slide, /<a:tailEnd type="triangle"\/>/u);
 });
 
 test("writes a shared node as one tall editable shape with bound connectors", () => {

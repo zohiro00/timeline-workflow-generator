@@ -14,9 +14,12 @@ const EDGE_DEFINITIONS_BY_TYPE = new Map(EDGE_DEFINITIONS.map((edge) => [edge.ty
 const EDGE_USAGE = EDGE_DEFINITIONS.map((edge) => `a ${edge.token} b`).join("`、`");
 export const workflowEdgeSyntax = Object.freeze(EDGE_DEFINITIONS.map(({ token, type }) => Object.freeze({ token, type })));
 const WORKFLOW_SECTIONS = new Set(["lanes", "nodes", "workflow"]);
+const WORKFLOW_SUBSECTIONS = new Set(["annotations"]);
 const LABEL_FIT_STRATEGIES = new Set(["wrap-first", "shrink-first"]);
 const CROSS_MARK_SIZE = 20;
 const CROSS_MARK_BACKGROUND_RADIUS = 13;
+const ANNOTATION_TRACK_OFFSET = 32;
+const ANNOTATION_TRACK_GAP = 28;
 const defaultThemeId = "consulting-blue-outline";
 export const workflowSvgDefaults = Object.freeze({
   paddingLeft: 140,
@@ -119,8 +122,10 @@ export function parseWorkflow(input, options = {}) {
   const laneSet = new Set();
   const nodes = new Map();
   const edges = [];
+  const annotations = [];
   let title = options.defaultTitle ?? "時系列ワークフロー";
   let currentSection = null;
+  let currentWorkflowSubsection = null;
   let currentNodeLaneGroup = null;
   let highlightedNodeId = null;
   const seenSections = new Set();
@@ -139,12 +144,25 @@ export function parseWorkflow(input, options = {}) {
       return;
     }
 
+    if (trimmed.startsWith("### ")) {
+      const subsection = trimmed.slice(4).trim().toLowerCase();
+      if (currentSection !== "workflow") {
+        throw workflowError("`### annotations` は `## workflow` の中に記述してください。", lineNo, "subsection.context");
+      }
+      if (!WORKFLOW_SUBSECTIONS.has(subsection)) {
+        throw workflowError("workflow の小見出しは `### annotations` と記述してください。", lineNo, "subsection.invalid");
+      }
+      currentWorkflowSubsection = subsection;
+      return;
+    }
+
     if (trimmed.startsWith("## ")) {
       const section = trimmed.slice(3).trim().toLowerCase();
       if (!WORKFLOW_SECTIONS.has(section)) {
         throw workflowError("セクションは `## lanes`、`## nodes`、`## workflow` のいずれかで記述してください。", lineNo, "section.invalid");
       }
       currentSection = section;
+      currentWorkflowSubsection = null;
       currentNodeLaneGroup = null;
       seenSections.add(section);
       return;
@@ -223,27 +241,56 @@ export function parseWorkflow(input, options = {}) {
 
     if (currentSection === "workflow") {
       const match = trimmed.match(/^-\s+(.+)$/);
-      if (!match) throw workflowError("workflow は `- a -> b` の形式で記述してください。", lineNo, "workflow.syntax");
-      edges.push(...parseEdgeChain(match[1].trim(), lineNo));
+      if (!match) {
+        const message = currentWorkflowSubsection === "annotations"
+          ? "annotations は `- a <- b` の形式で記述してください。"
+          : "workflow は `- a -> b` の形式で記述してください。";
+        const code = currentWorkflowSubsection === "annotations" ? "annotation.syntax" : "workflow.syntax";
+        throw workflowError(message, lineNo, code);
+      }
+      if (currentWorkflowSubsection === "annotations") {
+        annotations.push(...parseAnnotationChain(match[1].trim(), lineNo));
+      } else {
+        edges.push(...parseEdgeChain(match[1].trim(), lineNo));
+      }
       return;
     }
 
     throw workflowError("解釈できない行です。", lineNo, "line.unrecognized");
   });
 
-  validateWorkflow({ lanes, nodes, edges, seenSections, nodeLaneGroups });
+  validateWorkflow({ lanes, nodes, edges, annotations, seenSections, nodeLaneGroups });
 
   return {
     title,
     lanes,
     nodes: Array.from(nodes.values()),
     edges,
+    ...(annotations.length > 0 ? { annotations } : {}),
   };
 }
 
 export function layoutWorkflow(workflow) {
   const laneIndex = new Map(workflow.lanes.map((lane, index) => [lane.id, index]));
   const activeNodeIds = new Set(workflow.edges.flatMap((edge) => [edge.from, edge.to]));
+  for (const annotation of workflow.annotations ?? []) {
+    if (!activeNodeIds.has(annotation.from)) {
+      throw workflowError(
+        `補助線の開始ノード "${annotation.from}" は workflow の依存関係から参照してください。`,
+        null,
+        "annotation.from-inactive",
+        { id: annotation.from },
+      );
+    }
+    if (!activeNodeIds.has(annotation.to)) {
+      throw workflowError(
+        `補助線の終了ノード "${annotation.to}" は workflow の依存関係から参照してください。`,
+        null,
+        "annotation.to-inactive",
+        { id: annotation.to },
+      );
+    }
+  }
   const activeNodes = workflow.nodes.filter((node) => activeNodeIds.has(node.id));
   const nodes = new Map(activeNodes.map((node) => [node.id, { ...node, laneIds: [...node.laneIds] }]));
   const incoming = new Map(activeNodes.map((node) => [node.id, []]));
@@ -281,6 +328,17 @@ export function layoutWorkflow(workflow) {
     node.gridYEnd = Math.max(...laneIndexes);
   }
 
+  for (const annotation of workflow.annotations ?? []) {
+    if (nodes.get(annotation.to).gridX >= nodes.get(annotation.from).gridX) {
+      throw workflowError(
+        `補助線 "${annotation.to} <- ${annotation.from}" は、時系列上で前にあるノードへ戻してください。`,
+        null,
+        "annotation.not-backward",
+        { from: annotation.from, to: annotation.to },
+      );
+    }
+  }
+
   const laidOutNodes = Array.from(nodes.values());
   const overlap = findSharedNodeOverlap(laidOutNodes);
   if (overlap) {
@@ -307,7 +365,7 @@ export function createWorkflowRenderModel(workflow, options = {}) {
   const theme = workflowThemes[config.theme] ?? workflowThemes[defaultThemeId];
   const maxGridX = Math.max(0, ...workflow.nodes.map((node) => node.gridX));
   const width = config.paddingLeft + maxGridX * config.gridXSize + config.nodeWidth + config.paddingRight;
-  const height = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
+  const baseHeight = config.paddingTop + Math.max(0, workflow.lanes.length - 1) * config.gridYSize + config.nodeHeight + config.paddingBottom;
   const nodes = workflow.nodes.map((node) => {
     const x = config.paddingLeft + node.gridX * config.gridXSize;
     const y = config.paddingTop + node.gridYStart * config.gridYSize;
@@ -337,8 +395,40 @@ export function createWorkflowRenderModel(workflow, options = {}) {
     lastLaneBottom,
     ...nodes.map((node) => node.y + node.height),
   );
+  const annotationCorridorOffset = Math.max(16, Math.min(48, (config.gridXSize - config.nodeWidth) / 2));
+  const annotations = (workflow.annotations ?? []).map((annotation, index) => {
+    const from = nodeById.get(annotation.from);
+    const to = nodeById.get(annotation.to);
+    const x1 = from.x + from.width;
+    const y1 = from.centerY;
+    const x2 = to.x;
+    const y2 = to.centerY;
+    const startCorridorX = x1 + annotationCorridorOffset;
+    const endCorridorX = x2 - annotationCorridorOffset;
+    const trackY = lastRenderedBottom + ANNOTATION_TRACK_OFFSET + index * ANNOTATION_TRACK_GAP;
+    return {
+      ...annotation,
+      fromNode: from,
+      toNode: to,
+      x1,
+      y1,
+      x2,
+      y2,
+      startCorridorX,
+      endCorridorX,
+      trackY,
+      pathData: {
+        path: `M ${x1} ${y1} L ${startCorridorX} ${y1} L ${startCorridorX} ${trackY} L ${endCorridorX} ${trackY} L ${endCorridorX} ${y2} L ${x2} ${y2}`,
+      },
+      startConnectionIndex: 3,
+      endConnectionIndex: 1,
+    };
+  });
+  const height = annotations.length === 0
+    ? baseHeight
+    : Math.max(baseHeight, annotations.at(-1).trackY + config.paddingBottom / 2);
   const timeLineEndY = Math.min(
-    height - config.paddingBottom / 2,
+    baseHeight - config.paddingBottom / 2,
     lastRenderedBottom + Math.max(16, config.paddingBottom / 4),
   );
   const laneRows = workflow.lanes.map((lane, index) => {
@@ -437,6 +527,7 @@ export function createWorkflowRenderModel(workflow, options = {}) {
     gridLines,
     laneRows,
     edges,
+    ...(annotations.length > 0 ? { annotations } : {}),
     nodes,
   };
 }
@@ -466,6 +557,18 @@ export function renderWorkflowSvg(workflow, options = {}) {
     return edge.marker === "cross" ? `${edgePath}\n      ${crossMark(edge.pathData)}` : edgePath;
   });
 
+  const annotations = (model.annotations ?? []).map((annotation) => {
+    return `<path class="annotation annotation-return" d="${annotation.pathData.path}" marker-end="url(#annotation-arrow)" />`;
+  });
+  const annotationMarker = annotations.length === 0 ? "" : `
+    <marker id="annotation-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 3 L 0 6 z" fill="${theme.edge}" />
+    </marker>`;
+  const annotationStyle = annotations.length === 0
+    ? ""
+    : `
+      .annotation { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; stroke-dasharray: 7 7; }`;
+
   const nodes = model.nodes.map((node) => {
     const classes = ["node"];
     if (node.highlighted) classes.push(workflowNodeHighlight.className);
@@ -482,7 +585,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M 0 0 L 8 3 L 0 6 z" fill="${theme.edge}" />
-    </marker>
+    </marker>${annotationMarker}
     <style>
       .workflow-diagram { background: ${theme.background}; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .lane-line { stroke: ${theme.laneLine}; stroke-width: 1; }
@@ -490,7 +593,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
       .time-line { stroke: ${theme.timeLine}; stroke-width: 1; stroke-dasharray: 4 8; }
       .time-label { fill: ${theme.timeLabel}; font-size: 12px; font-weight: 700; text-anchor: middle; }
       .edge { fill: none; stroke: ${theme.edge}; stroke-width: 2.4; }
-      .edge-dotted { stroke-dasharray: 7 7; }
+      .edge-dotted { stroke-dasharray: 7 7; }${annotationStyle}
       .edge-cross-mark-background { fill: ${theme.background}; }
       .edge-cross-mark line { stroke: ${theme.edge}; stroke-width: 3.4; stroke-linecap: round; }
       .node rect { fill: ${theme.nodeFill}; stroke: ${theme.nodeStroke}; stroke-width: 2; }
@@ -502,7 +605,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
   <text x="${model.title.x}" y="${model.title.y}" fill="${theme.title}" font-size="${model.title.fontSize}" font-weight="800">${escapeXml(model.title.text)}</text>
   ${gridLines.join("")}
   ${laneRows.join("")}
-  ${edges.join("")}
+  ${edges.join("")}${annotations.length > 0 ? `\n  ${annotations.join("")}` : ""}
   ${nodes.join("")}
 </svg>`.trim();
 }
@@ -531,7 +634,20 @@ function parseEdgeChain(line, lineNo) {
   return edges;
 }
 
-function validateWorkflow({ lanes, nodes, edges, seenSections, nodeLaneGroups }) {
+function parseAnnotationChain(line, lineNo) {
+  const nodeIds = line.split("<-").map((nodeId) => nodeId.trim());
+  if (nodeIds.length < 2 || nodeIds.some((nodeId) => !isNodeId(nodeId))) {
+    throw workflowError("補助線は `a <- b` の形式で記述してください。", lineNo, "annotation.syntax");
+  }
+
+  return nodeIds.slice(0, -1).map((to, index) => ({
+    from: nodeIds[index + 1],
+    to,
+    type: "return",
+  }));
+}
+
+function validateWorkflow({ lanes, nodes, edges, annotations, seenSections, nodeLaneGroups }) {
   if (!seenSections.has("lanes")) throw workflowError("`## lanes` セクションを定義してください。", null, "section.lanes-missing");
   if (!seenSections.has("nodes")) throw workflowError("`## nodes` セクションを定義してください。", null, "section.nodes-missing");
   if (!seenSections.has("workflow")) throw workflowError("`## workflow` セクションを定義してください。", null, "section.workflow-missing");
@@ -575,6 +691,25 @@ function validateWorkflow({ lanes, nodes, edges, seenSections, nodeLaneGroups })
   for (const edge of edges) {
     if (!nodes.has(edge.from)) throw workflowError(`エッジの開始ノード "${edge.from}" が定義されていません。`, null, "edge.from-undefined", { id: edge.from });
     if (!nodes.has(edge.to)) throw workflowError(`エッジの終了ノード "${edge.to}" が定義されていません。`, null, "edge.to-undefined", { id: edge.to });
+  }
+
+  for (const annotation of annotations) {
+    if (!nodes.has(annotation.from)) {
+      throw workflowError(
+        `補助線の開始ノード "${annotation.from}" が定義されていません。`,
+        null,
+        "annotation.from-undefined",
+        { id: annotation.from },
+      );
+    }
+    if (!nodes.has(annotation.to)) {
+      throw workflowError(
+        `補助線の終了ノード "${annotation.to}" が定義されていません。`,
+        null,
+        "annotation.to-undefined",
+        { id: annotation.to },
+      );
+    }
   }
 }
 

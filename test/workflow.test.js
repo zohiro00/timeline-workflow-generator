@@ -68,6 +68,185 @@ test("parses workflow blocks from markdown", () => {
   assert.equal(workflow.edges[2].type, "cross");
   assert.equal(workflow.edges[6].type, "dottedCross");
   assert.equal(workflow.edges[7].type, "invisible");
+  assert.equal("annotations" in workflow, false);
+  const model = createWorkflowRenderModel(layoutWorkflow(workflow));
+  const svg = renderWorkflowSvg(layoutWorkflow(workflow));
+  assert.equal("annotations" in model, false);
+  assert.doesNotMatch(svg, /annotation-arrow|annotation-return/u);
+});
+
+test("parses return annotations without changing workflow dependencies", () => {
+  const workflow = parseWorkflow(`# Code review
+
+## lanes
+- development: Development
+
+## nodes
+- development
+  - generate: Generate code
+  - review: Review
+  - delivery: Delivery
+
+## workflow
+- generate -> review -> delivery
+
+### annotations
+- generate <- review
+`);
+
+  assert.deepEqual(workflow.edges, [
+    { from: "generate", to: "review", type: "solid" },
+    { from: "review", to: "delivery", type: "solid" },
+  ]);
+  assert.deepEqual(workflow.annotations, [
+    { from: "review", to: "generate", type: "return" },
+  ]);
+});
+
+test("keeps return annotations out of DAG layout and cycle detection", () => {
+  const workflow = layoutWorkflow(parseWorkflow(`# Retry
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+  - c: C
+
+## workflow
+- a -> b -> c
+
+### annotations
+- a <- b <- c
+`));
+
+  assert.deepEqual(
+    workflow.nodes.map(({ id, gridX }) => ({ id, gridX })),
+    [
+      { id: "a", gridX: 0 },
+      { id: "b", gridX: 1 },
+      { id: "c", gridX: 2 },
+    ],
+  );
+  assert.deepEqual(workflow.annotations, [
+    { from: "b", to: "a", type: "return" },
+    { from: "c", to: "b", type: "return" },
+  ]);
+});
+
+test("rejects annotation subsections outside workflow and undefined endpoints", () => {
+  assert.throws(
+    () => parseWorkflow(`## lanes
+- main: Main
+
+### annotations
+- a <- b
+`),
+    /Line 4: `### annotations` は `## workflow` の中に記述してください。/,
+  );
+
+  assert.throws(
+    () => parseWorkflow(`## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+
+## workflow
+- a -> b
+
+### annotations
+- a <- missing
+`),
+    /補助線の開始ノード "missing" が定義されていません。/,
+  );
+});
+
+test("rejects annotations that do not return to an earlier timeline step", () => {
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(`## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+
+## workflow
+- a -> b
+
+### annotations
+- b <- a
+`)),
+    /補助線 "b <- a" は、時系列上で前にあるノードへ戻してください。/,
+  );
+});
+
+test("renders return annotations on separate tracks below the workflow", () => {
+  const source = `# Multiple returns
+
+## lanes
+- main: Main
+
+## nodes
+- main
+  - a: A
+  - b: B
+  - c: C
+
+## workflow
+- a -> b -> c
+
+### annotations
+- a <- b
+- a <- c
+`;
+  const regular = createWorkflowRenderModel(layoutWorkflow(parseWorkflow(source.replace(/\n### annotations[\s\S]*/u, ""))));
+  const model = createWorkflowRenderModel(layoutWorkflow(parseWorkflow(source)));
+  const svg = renderWorkflowSvg(layoutWorkflow(parseWorkflow(source)));
+
+  assert.equal(model.annotations.length, 2);
+  assert.ok(model.height > regular.height);
+  assert.notEqual(model.annotations[0].trackY, model.annotations[1].trackY);
+  assert.equal((model.annotations[0].pathData.path.match(/ L /gu) ?? []).length, 5);
+  assert.equal((svg.match(/class="annotation annotation-return"/gu) ?? []).length, 2);
+  assert.match(svg, /marker-end="url\(#annotation-arrow\)"/u);
+});
+
+test("routes return annotation corridors outside parallel node columns", () => {
+  const workflow = layoutWorkflow(parseWorkflow(`# Parallel return
+
+## lanes
+- upper: Upper
+- lower: Lower
+
+## nodes
+- upper
+  - a: A
+  - b: B
+  - c: C
+- lower
+  - d: D
+  - e: E
+
+## workflow
+- a -> b -> c
+- a -> d -> e
+
+### annotations
+- a <- b
+`));
+  const model = createWorkflowRenderModel(workflow);
+  const annotation = model.annotations[0];
+  const parallelNode = model.nodes.find((node) => node.id === "d");
+
+  assert.ok(annotation.startCorridorX > parallelNode.x + parallelNode.width);
+  assert.ok(annotation.endCorridorX < model.nodes.find((node) => node.id === "a").x);
+  assert.ok(annotation.trackY > Math.max(...model.nodes.map((node) => node.y + node.height)));
 });
 
 test("publishes the edge syntax accepted by the parser", () => {

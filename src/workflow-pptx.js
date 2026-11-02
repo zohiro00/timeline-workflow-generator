@@ -153,6 +153,66 @@ function createSlideXml(model) {
     }
   });
 
+  (model.annotations ?? []).forEach((annotation) => {
+    const segments = [
+      {
+        x1: annotation.x1,
+        y1: annotation.y1,
+        x2: annotation.startCorridorX,
+        y2: annotation.y1,
+        fromShapeId: nodeShapeIds.get(annotation.from),
+        startConnectionIndex: annotation.startConnectionIndex,
+      },
+      {
+        x1: annotation.startCorridorX,
+        y1: annotation.y1,
+        x2: annotation.startCorridorX,
+        y2: annotation.trackY,
+      },
+      {
+        x1: annotation.startCorridorX,
+        y1: annotation.trackY,
+        x2: annotation.endCorridorX,
+        y2: annotation.trackY,
+      },
+      {
+        x1: annotation.endCorridorX,
+        y1: annotation.trackY,
+        x2: annotation.endCorridorX,
+        y2: annotation.y2,
+      },
+      {
+        x1: annotation.endCorridorX,
+        y1: annotation.y2,
+        x2: annotation.x2,
+        y2: annotation.y2,
+        toShapeId: nodeShapeIds.get(annotation.to),
+        endConnectionIndex: annotation.endConnectionIndex,
+        arrow: true,
+      },
+    ];
+
+    segments.forEach((segment, index) => {
+      shapes.push(connectorXml({
+        id: nextShapeId++,
+        name: `annotation ${annotation.from} to ${annotation.to} segment ${index + 1}`,
+        preset: "straightConnector1",
+        x1: layout.x(segment.x1),
+        y1: layout.y(segment.y1),
+        x2: layout.x(segment.x2),
+        y2: layout.y(segment.y2),
+        color: model.theme.edge,
+        width: layout.size(2.4),
+        dash: "dash",
+        arrow: Boolean(segment.arrow),
+        fromShapeId: segment.fromShapeId,
+        toShapeId: segment.toShapeId,
+        startConnectionIndex: segment.startConnectionIndex,
+        endConnectionIndex: segment.endConnectionIndex,
+      }));
+    });
+  });
+
   shapes.push(textBoxXml({
     id: nextShapeId++,
     name: "Workflow title",
@@ -261,13 +321,15 @@ function connectorXml({
   arrow,
 }) {
   const transform = lineTransform(x1, y1, x2, y2);
+  const startConnection = fromShapeId == null ? "" : `<a:stCxn id="${fromShapeId}" idx="${startConnectionIndex}"/>`;
+  const endConnection = toShapeId == null ? "" : `<a:endCxn id="${toShapeId}" idx="${endConnectionIndex}"/>`;
   return `\
 <p:cxnSp>
   <p:nvCxnSpPr>
     <p:cNvPr id="${id}" name="${escapeXml(name)}"/>
     <p:cNvCxnSpPr>
-      <a:stCxn id="${fromShapeId}" idx="${startConnectionIndex}"/>
-      <a:endCxn id="${toShapeId}" idx="${endConnectionIndex}"/>
+      ${startConnection}
+      ${endConnection}
     </p:cNvCxnSpPr>
     <p:nvPr/>
   </p:nvCxnSpPr>
