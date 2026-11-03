@@ -73,6 +73,36 @@ test("formats shared lane and overlap errors in English", () => {
   );
 });
 
+test("formats annotation errors in English", () => {
+  assert.throws(
+    () => parseWorkflow(`## lanes
+- main: Main
+### annotations
+- a <- b`),
+    (error) => {
+      assert.equal(formatWorkflowError(error, "en"), "Line 3: Write `### annotations` inside the `## workflow` section.");
+      return true;
+    },
+  );
+
+  assert.throws(
+    () => layoutWorkflow(parseWorkflow(`## lanes
+- main: Main
+## nodes
+- main
+  - a: A
+  - b: B
+## workflow
+- a -> b
+### annotations
+- b <- a`)),
+    (error) => {
+      assert.equal(formatWorkflowError(error, "en"), 'Return annotation "b <- a" must point to a node earlier on the timeline.');
+      return true;
+    },
+  );
+});
+
 test("renders locale-specific defaults and time labels", () => {
   const source = `## lanes\n- main: Main\n## nodes\n- main\n  - a: Start\n  - b: Done\n## workflow\n- a -> b`;
   const options = workflowLocaleOptions("en");

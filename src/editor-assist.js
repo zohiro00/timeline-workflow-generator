@@ -44,6 +44,8 @@ export function formatWorkflowSource(value) {
       section = heading[1].toLowerCase();
       return `## ${section}`;
     }
+    const subsection = formatted.match(/^###\s*annotations\s*$/i);
+    if (subsection && section === "workflow") return "### annotations";
 
     if (/^#{1,6}\s/.test(formatted) || /^```/.test(formatted)) section = "";
 
@@ -55,7 +57,7 @@ export function formatWorkflowSource(value) {
       );
     }
     if (section === "workflow") {
-      formatted = formatted.replace(/\s*(-\.->|-->)\s*/g, " $1 ");
+      formatted = formatted.replace(/\s*(<-|-\.->|-->)\s*/g, " $1 ");
     }
     return formatted;
   });

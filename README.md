@@ -16,6 +16,7 @@ ExcelやPowerPointで図形を並べる代わりに、作業、レーン、依�
 - レーンと時間軸を固定したSVGレンダリング
 - 連続する複数レーンをまたぐ共有ノード
 - 実線、点線、中止マーク、見えない依存によるワークフロー表現
+- DAGレイアウトを変えずに差戻しや再試行を示す戻り線
 - 配色プリセット、ノード幅、レーン間隔、プレビュー倍率の調整
 - 日本語・英語のUI、サンプル、エラー、時間ラベル切替
 - SVG / PNG ダウンロードと画像コピー
@@ -91,7 +92,7 @@ pnpm run vscode:package
 ```
 ````
 
-ワークフロー記法の詳しい仕様、エラー例、PowerPointでの使い方は [docs/dsl.md](docs/dsl.md) を参照してください。英語版は [docs/dsl.en.md](docs/dsl.en.md) です。
+ワークフロー記法の詳しい仕様、エラー例、PowerPointでの使い方は [docs/dsl.md](docs/dsl.md) を参照してください。戻り線は [5つの利用例](docs/annotation-examples.md) でも確認できます。英語版は [docs/dsl.en.md](docs/dsl.en.md) です。
 
 ## Project Structure
 

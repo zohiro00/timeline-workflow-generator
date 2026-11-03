@@ -12,6 +12,7 @@ A web application that generates lane-based timeline diagrams from dependency-ba
 - Automatic DAG-based timeline layout
 - Shared nodes spanning contiguous lanes
 - Solid, dotted, rejected, and invisible dependencies
+- Return annotations for revisions and retries without changing DAG layout
 - Editable PowerPoint shapes and connectors
 - SVG / PNG download and image copy
 - English and Japanese Web UI, examples, errors, and generated labels
@@ -63,7 +64,7 @@ pnpm run build
 ```
 ````
 
-See the [workflow syntax reference](docs/dsl.en.md) for the complete syntax, error examples, and PowerPoint workflow.
+See the [workflow syntax reference](docs/dsl.en.md) for the complete syntax, error examples, and PowerPoint workflow. Five complete scenarios are available in the [return annotation examples](docs/annotation-examples.en.md).
 
 ## VS Code Extension
 

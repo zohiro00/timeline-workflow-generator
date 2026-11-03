@@ -24,6 +24,26 @@ const sharedUiSource = `# Shared export
 ## workflow
 - a1 -> shared
 - b1 -> shared`;
+const annotationUiSource = `# コードレビュー
+
+## lanes
+- development: 開発
+- review: レビュー
+- delivery: 納品
+
+## nodes
+- development
+  - generate: コード生成
+- review
+  - inspect: レビュー
+- delivery
+  - deliver: 納品
+
+## workflow
+- generate -> inspect -> deliver
+
+### annotations
+- generate <- inspect`;
 
 let devServer;
 let browser;
@@ -291,6 +311,8 @@ test("engine syntax guide explains every accepted connection without changing th
     "a ~> b",
   ]);
   assert.match(await guide.locator(".syntax-guide-edge").last().textContent(), /線を描かず、bをaより後に配置します/);
+  assert.match(await guide.textContent(), /### annotations/);
+  assert.match(await guide.textContent(), /- a <- b/);
   assert.match(await guide.textContent(), /連続する複数レーンをまたぐ共有ノード/);
   assert.equal(await source.inputValue(), sourceBefore);
   assert.equal(await page.locator("#preview svg").innerHTML(), previewBefore);
@@ -314,6 +336,8 @@ test("engine syntax guide localizes its content and reference link", async () =>
 
   assert.doesNotMatch(await guide.textContent(), /[ぁ-んァ-ヶ一-龠々ー]/);
   assert.match(await guide.textContent(), /Draws no line and places b after a on the timeline/);
+  assert.match(await guide.textContent(), /Annotations/);
+  assert.match(await guide.textContent(), /return line that does not affect the timeline layout/);
   assert.match(await page.locator("#syntax-guide-reference").getAttribute("href"), /docs\/dsl\.en\.md$/);
   assert.equal(await page.locator("#syntax-guide-toggle").getAttribute("aria-label"), "Syntax guide");
   assert.equal(await page.locator("#syntax-guide-close").getAttribute("aria-label"), "Close syntax guide");
@@ -344,6 +368,40 @@ test("engine syntax guide opens as a keyboard-accessible mobile overlay", async 
   await guideToggle.click();
   await page.locator("#syntax-guide-backdrop").click({ position: { x: 2, y: 2 } });
   await expectLocatorHidden(sidebar);
+  await page.close();
+});
+
+test("engine renders return annotations without moving regular workflow nodes", async () => {
+  const page = await openEnginePage({ width: 1280, height: 820 });
+  const source = page.locator("#source");
+  const regularSource = annotationUiSource.replace(/\n### annotations[\s\S]*/u, "");
+
+  await source.fill(regularSource);
+  await page.waitForFunction(() => document.querySelector("#preview svg title")?.textContent === "コードレビュー");
+  const regularNodeTransforms = await page.locator("#preview svg .node").evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("transform")));
+  const regularViewBox = (await page.locator("#preview svg").getAttribute("viewBox")).split(" ").map(Number);
+
+  await source.fill(annotationUiSource);
+  await page.waitForFunction(() => document.querySelectorAll("#preview svg .annotation-return").length === 1);
+  const annotatedNodeTransforms = await page.locator("#preview svg .node").evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("transform")));
+  const annotatedViewBox = (await page.locator("#preview svg").getAttribute("viewBox")).split(" ").map(Number);
+
+  assert.deepEqual(annotatedNodeTransforms, regularNodeTransforms);
+  assert.equal(annotatedViewBox[2], regularViewBox[2]);
+  assert.ok(annotatedViewBox[3] >= regularViewBox[3]);
+  const annotationPath = await page.locator("#preview svg .annotation-return").getAttribute("d");
+  assert.equal((annotationPath.match(/ L /gu) ?? []).length, 5);
+  const annotationCoordinates = annotationPath.match(/-?\d+(?:\.\d+)?/gu).map(Number);
+  const annotationXCoordinates = annotationCoordinates.filter((_, index) => index % 2 === 0);
+  const annotationYCoordinates = annotationCoordinates.filter((_, index) => index % 2 === 1);
+  assert.ok(Math.min(...annotationXCoordinates) >= 0);
+  assert.ok(Math.max(...annotationXCoordinates) <= annotatedViewBox[2]);
+  assert.ok(Math.max(...annotationYCoordinates) <= annotatedViewBox[3]);
+  assert.equal(await page.locator("#preview svg .annotation-return").getAttribute("marker-end"), "url(#annotation-arrow)");
+  assert.equal(await page.locator("#status-summary").textContent(), "プレビューを更新しました");
+
   await page.close();
 });
 

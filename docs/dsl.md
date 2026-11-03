@@ -153,6 +153,29 @@ SVG に描画されるのは `## workflow` の依存関係で参照されたノ�
 
 矢印の両端には、定義済みのノードIDを指定します。
 
+### annotations
+
+処理の失敗、差戻し、再試行など、時系列を戻る関係は `## workflow` 内の `### annotations` に記述します。
+
+```workflow
+## workflow
+- generate -> review -> delivery
+
+### annotations
+- generate <- review
+```
+
+`generate <- review` は、`review` から `generate` へ戻る点線矢印を描画します。補助線はノードの横位置、循環検出、通常の依存関係には影響しません。両端のノードは、通常の依存関係からも参照されている必要があります。
+
+複数の戻り線はチェーンでも記述できます。補助線ごとに異なる描画トラックが自動で割り当てられるため、座標や経路を指定する必要はありません。
+
+```workflow
+### annotations
+- first <- second <- third
+```
+
+実際の業務を想定した5つの記述例は、[戻り線の利用例](annotation-examples.md)を参照してください。
+
 ## チェーン
 
 連続する依存関係は、1行にまとめて書けます。
