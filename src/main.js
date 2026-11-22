@@ -23,6 +23,7 @@ import {
   workflowLocaleOptions,
 } from "./i18n.js";
 import "./styles.css";
+import { createWorkflowHtml } from "./workflow-html.js";
 
 const stackedWorkspaceQuery = "(max-width: 980px)";
 const mobileWorkflowExamplesQuery = "(max-width: 720px)";
@@ -556,6 +557,7 @@ function renderEnginePage() {
                   <div id="export-menu-list" class="export-menu-list" role="menu" hidden>
                     <button id="copy-image" class="export-menu-item" type="button" role="menuitem">画像をコピー</button>
                     <button id="download-png" class="export-menu-item" type="button" role="menuitem">PNGでダウンロード</button>
+                    <button id="download-html" class="export-menu-item" type="button" role="menuitem">HTMLでダウンロード</button>
                     <button id="download-pptx" class="export-menu-item" type="button" role="menuitem">PPTXでダウンロード</button>
                     <button id="download-svg" class="export-menu-item" type="button" role="menuitem">SVGでダウンロード</button>
                   </div>
@@ -814,6 +816,7 @@ function mountEngine() {
   const exportMenuList = document.querySelector("#export-menu-list");
   const copyImage = document.querySelector("#copy-image");
   const downloadPng = document.querySelector("#download-png");
+  const downloadHtml = document.querySelector("#download-html");
   const downloadPptx = document.querySelector("#download-pptx");
   const download = document.querySelector("#download-svg");
   const starterTemplateButton = document.querySelector("#format-sample");
@@ -890,6 +893,7 @@ function mountEngine() {
   exportMenuToggle.addEventListener("click", toggleExportMenu);
   copyImage.addEventListener("click", copyPngImage);
   downloadPng.addEventListener("click", downloadPngImage);
+  downloadHtml.addEventListener("click", downloadHtmlFile);
   downloadPptx.addEventListener("click", downloadPptxDeck);
   download.addEventListener("click", downloadSvg);
   previewZoomOut.addEventListener("click", () => setPreviewZoom(previewZoom.scale - previewZoomConfig.step, "manual"));
@@ -1508,6 +1512,19 @@ function mountEngine() {
     const blob = new Blob([currentSvg], { type: "image/svg+xml" });
     downloadBlob(blob, createExportFilename("svg"));
     closeExportMenu();
+  }
+
+  function downloadHtmlFile() {
+    if (!currentSvg) return;
+    try {
+      const html = createWorkflowHtml(currentSvg);
+      downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), createExportFilename("html"));
+      statusSummary.textContent = translate("HTML downloaded", activeLocale);
+    } catch (error) {
+      showExportError(error);
+    } finally {
+      closeExportMenu();
+    }
   }
 
   async function downloadPngImage() {
