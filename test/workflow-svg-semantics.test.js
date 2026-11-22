@@ -15,7 +15,7 @@ const source = `# Purchase
 ## workflow
 - create -> approve -> pay
 ### annotations
-- pay <- create`;
+- create <- pay`;
 
 test("SVG exports semantic selectors for nodes, edges and annotations", () => {
   const workflow = layoutWorkflow(parseWorkflow(source));
