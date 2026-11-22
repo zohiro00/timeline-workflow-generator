@@ -551,14 +551,14 @@ export function renderWorkflowSvg(workflow, options = {}) {
       <line class="time-line" x1="${line.x}" y1="${line.y1}" x2="${line.x}" y2="${line.y2}" />${timeLabel}`;
   });
 
-  const edges = model.edges.map((edge) => {
+  const edges = model.edges.map((edge, index) => {
     const markerEnd = edge.marker === "arrow" ? ' marker-end="url(#arrow)"' : "";
-    const edgePath = `<path class="${edge.classes.join(" ")}" d="${edge.pathData.path}"${markerEnd} />`;
+    const edgePath = `<path id="edge-${index + 1}" data-from="${escapeXml(edge.from)}" data-to="${escapeXml(edge.to)}" class="${edge.classes.join(" ")}" d="${edge.pathData.path}"${markerEnd} />`;
     return edge.marker === "cross" ? `${edgePath}\n      ${crossMark(edge.pathData)}` : edgePath;
   });
 
-  const annotations = (model.annotations ?? []).map((annotation) => {
-    return `<path class="annotation annotation-return" d="${annotation.pathData.path}" marker-end="url(#annotation-arrow)" />`;
+  const annotations = (model.annotations ?? []).map((annotation, index) => {
+    return `<path id="annotation-${index + 1}" data-from="${escapeXml(annotation.from)}" data-to="${escapeXml(annotation.to)}" class="annotation annotation-return" d="${annotation.pathData.path}" marker-end="url(#annotation-arrow)" />`;
   });
   const annotationMarker = annotations.length === 0 ? "" : `
     <marker id="annotation-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
@@ -573,7 +573,7 @@ export function renderWorkflowSvg(workflow, options = {}) {
     const classes = ["node"];
     if (node.highlighted) classes.push(workflowNodeHighlight.className);
     return `
-      <g class="${classes.join(" ")}" transform="translate(${node.x}, ${node.y})">
+      <g id="node-${escapeXml(node.id)}" data-node-id="${escapeXml(node.id)}" class="${classes.join(" ")}" transform="translate(${node.x}, ${node.y})">
         <rect width="${node.width}" height="${node.height}" rx="8" />
         <text x="${node.width / 2}" y="${node.height / 2}" font-size="${node.label.fontSize}">${renderLabelTspans(node.label, node.width / 2)}</text>
       </g>`;

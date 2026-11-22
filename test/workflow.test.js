@@ -551,7 +551,7 @@ test("renders only nodes referenced by workflow edges", () => {
 
   assert.equal(parsed.nodes.length, 3);
   assert.deepEqual(workflow.nodes.map((node) => node.id), ["node1", "node2"]);
-  assert.equal([...svg.matchAll(/<g class="node"/g)].length, 2);
+  assert.equal([...svg.matchAll(/<g id="node-[^"]+" data-node-id="[^"]+" class="node"/g)].length, 2);
   assert.match(svg, />ノード1<\/tspan>/);
   assert.match(svg, />ノード2<\/tspan>/);
   assert.doesNotMatch(svg, />x<\/tspan>/);
@@ -822,7 +822,7 @@ test("renders dotted line edges without arrow markers", () => {
 - a -.- b
 `)));
 
-  assert.match(svg, /<path class="edge edge-dotted" d="M 252 137 L 328 137" \/>/);
+  assert.match(svg, /<path id="edge-1" data-from="a" data-to="b" class="edge edge-dotted" d="M 252 137 L 328 137" \/>/);
   assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
 });
 
@@ -847,9 +847,9 @@ test("renders cross edge types without arrow markers and hides invisible edges",
   assert.match(svg, /\.edge-cross-mark-background \{ fill: #ffffff; \}/);
   assert.match(svg, /<circle class="edge-cross-mark-background" r="13" \/>/);
   assert.match(svg, /translate\(290, 137\) rotate\(45\)/);
-  assert.match(svg, /<path class="edge edge-dotted" d="M 440 137 L 516 137" \/>/);
+  assert.match(svg, /<path id="edge-2" data-from="b" data-to="c" class="edge edge-dotted" d="M 440 137 L 516 137" \/>/);
   assert.doesNotMatch(svg, /marker-end="url\(#arrow\)"/);
-  assert.equal([...svg.matchAll(/<path class="edge/g)].length, 2);
+  assert.equal([...svg.matchAll(/<path id="edge-[^"]+"/g)].length, 2);
 });
 
 test("places cross marks at the center of connector paths", () => {
@@ -882,7 +882,7 @@ test("places cross marks at the center of connector paths", () => {
 - c1 -> a4
 `)));
 
-  assert.match(svg, /<path class="edge edge-dotted" d="M 628 253 C 676 253, 1032 369, 1080 369" \/>/);
+  assert.match(svg, /<path id="edge-4" data-from="b1" data-to="c1" class="edge edge-dotted" d="M 628 253 C 676 253, 1032 369, 1080 369" \/>/);
   assert.match(svg, /<g class="edge-cross-mark" transform="translate\(854, 311\) rotate\(45\)">/);
 });
 
@@ -910,8 +910,8 @@ test("renders only the highlighted node with the isolated highlight style", () =
 - a -> b
 `)), { theme: "consulting-blue-fill" });
 
-  assert.match(svg, /<g class="node node-highlighted" transform="translate\(140, 116\)">/);
-  assert.match(svg, /<g class="node" transform="translate\(328, 116\)">/);
+  assert.match(svg, /<g id="node-a" data-node-id="a" class="node node-highlighted" transform="translate\(140, 116\)">/);
+  assert.match(svg, /<g id="node-b" data-node-id="b" class="node" transform="translate\(328, 116\)">/);
   assert.match(svg, /\.node-highlighted rect \{ fill: #fcecec; stroke: #c65a5a; stroke-width: 4; \}/);
   assert.match(svg, /\.node-highlighted text \{ fill: #4a2020; \}/);
   assert.match(svg, /\.node rect \{ fill: #1f4e79; stroke: #1f4e79; stroke-width: 2; \}/);
